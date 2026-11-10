@@ -1,0 +1,34 @@
+{
+  "name": "plataforma-financeira",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite build && vite preview",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "cf-typegen": "wrangler types",
+    "usuarios": "node scripts/usuarios.ts",
+    "deploy": "npm run typecheck && npm test && vite build && wrangler deploy"
+  },
+  "dependencies": {
+    "jose": "^6.2.17",
+    "pdfjs-dist": "^6.5.438",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.68.0",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.7",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.160.0"
+  }
+}
