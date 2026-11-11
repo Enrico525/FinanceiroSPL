@@ -15,10 +15,10 @@ inquilinos, funcionários e fornecedores (nomes, CPF/CNPJ, valores, endereços).
 
 | Local | O que existe | Retenção |
 |---|---|---|
-| Navegador do usuário | PDF e texto extraído; depois só o resultado | Até limpar, cancelar ou fechar a página (melhor esforço) |
-| Cloudflare Worker | Texto durante a requisição | Somente durante o processamento; não gravado |
+| Navegador do usuário | PDFs, texto e registros lidos; depois só o resultado | Até nova conferência ou fechar a página (melhor esforço) |
+| Cloudflare Worker | Nenhum dado dos documentos (a conferência roda no navegador) | — |
 | Cookie de sessão (navegador) | Nome do usuário, assinado | Até 8 h ou até sair |
-| OpenAI | Texto enviado para análise | `store: false`; logs de monitoramento de abuso podem ser retidos (até ~30 dias, verificar termos vigentes) ⚖️ |
+| OpenAI | Nenhum (rota `/api/analisar` existe, mas o app não a usa) | — |
 | Banco de dados próprio | Nenhum | — |
 
 Logs técnicos contêm apenas categoria de erro e rota, sem conteúdo.

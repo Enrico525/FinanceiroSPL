@@ -1,4 +1,4 @@
-import type { CodigoErro, PedidoAnalise, ResultadoAnalise } from "../shared/contrato";
+import type { CodigoErro } from "../shared/contrato";
 
 const MENSAGENS: Record<CodigoErro, string> = {
   nao_autenticado: "Sua sessão terminou. Recarregue a página para entrar novamente.",
@@ -43,10 +43,3 @@ export const entrar = (nome: string, senha: string) =>
 
 export const sair = () => chamar<{ ok: true }>("/auth/sair", { method: "POST", headers: DO_APP, body: "{}" });
 
-export const analisar = (pedido: PedidoAnalise, signal: AbortSignal) =>
-  chamar<ResultadoAnalise>("/api/analisar", {
-    method: "POST",
-    headers: DO_APP,
-    body: JSON.stringify(pedido),
-    signal,
-  });

@@ -17,7 +17,7 @@
 | Cabeçalhos | CSP restrita, HSTS, nosniff, Referrer-Policy, anti-clickjacking | `public/_headers` |
 | XSS | Conteúdo de PDF/IA renderizado só como texto pelo React | `src/components/` |
 | PDF.js | Versão 6 (sem caminho de `eval`), worker servido pelo próprio app, CSP sem `unsafe-eval` | `src/pdf/extrair.ts` |
-| Prompt injection | Documentos delimitados e declarados não confiáveis; sem tools; JSON estrito; trechos conferidos no código | `worker/openai.ts`, `src/conferencia.ts` |
+| Prompt injection | A conferência não usa IA (regras em `src/nido/conferir.ts`). A rota OpenAI, ainda existente, mantém documentos delimitados e não confiáveis, sem tools e com JSON estrito | `worker/openai.ts` |
 | Logs | Só `{evento, rota, codigo}`; invocation logs desligados | `worker/index.ts`, `wrangler.jsonc` |
 
 ## Checklist de implantação

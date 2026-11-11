@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState } from "react";
-import type { ResultadoAnalise } from "../shared/contrato";
-import { analisar, buscarUsuario, ErroApi, sair } from "./api";
-import { conferirReferencias } from "./conferencia";
+import { buscarUsuario, ErroApi, sair } from "./api";
 import { lerPdf, ErroLeitura } from "./pdf/extrair";
-import { SeletorPdf, type Slot } from "./components/SeletorPdf";
+import { lerRecibos, lerRepasses, type Recibo, type Repasse } from "./nido/ler";
+import { conferir, type Caso } from "./nido/conferir";
+import { SeletorPdf, type ArquivoLido } from "./components/SeletorPdf";
 import { Resultado } from "./components/Resultado";
 import { Login } from "./components/Login";
 
-type Id = "A" | "B";
-type Analise =
-  | { fase: "ocioso" }
-  | { fase: "enviando" }
-  | { fase: "concluido"; resultado: ResultadoAnalise; conferidas: Set<string> }
-  | { fase: "erro"; mensagem: string };
+type Lado = "recibos" | "repasses";
+/** geral: todos os extratos de uma vez. um: um extrato por vez, mantendo os recibos carregados. */
+export type Modo = "geral" | "um";
+type Arquivos = { recibos: ArquivoLido<Recibo>[]; repasses: ArquivoLido<Repasse>[] };
+const VAZIO: Arquivos = { recibos: [], repasses: [] };
 
-const VAZIO: Record<Id, Slot> = { A: { estado: "vazio" }, B: { estado: "vazio" } };
+const LADOS = {
+  recibos: { rotulo: "Recibos do Locatário", plural: "recibos", titulo: "Recibo do Locatário", ler: lerRecibos },
+  repasses: { rotulo: "Extratos de Repasse", plural: "extratos", titulo: "Extrato de Repasse", ler: lerRepasses },
+} as const;
 
 export function App() {
   const [usuario, setUsuario] = useState<string | null>(null);
@@ -22,11 +24,10 @@ export function App() {
   const [avisoSair, setAvisoSair] = useState(false);
   const [erroSessao, setErroSessao] = useState<string | null>(null);
   const [naoLogado, setNaoLogado] = useState(false);
-  const [slots, setSlots] = useState<Record<Id, Slot>>(VAZIO);
-  const [analise, setAnalise] = useState<Analise>({ fase: "ocioso" });
-  const controlador = useRef<AbortController | null>(null);
-  // Descarta leituras que terminaram depois de o arquivo ter sido removido/trocado.
-  const geracao = useRef<Record<Id, number>>({ A: 0, B: 0 });
+  const [arquivos, setArquivos] = useState<Arquivos>(VAZIO);
+  const [casos, setCasos] = useState<Caso[] | null>(null);
+  const [modo, setModo] = useState<Modo>("geral");
+  const proximoId = useRef(0);
 
   useEffect(() => {
     buscarUsuario()
@@ -41,11 +42,8 @@ export function App() {
   }, []);
 
   const limparTudo = () => {
-    controlador.current?.abort();
-    controlador.current = null;
-    geracao.current = { A: geracao.current.A + 1, B: geracao.current.B + 1 };
-    setSlots(VAZIO);
-    setAnalise({ fase: "ocioso" });
+    setArquivos(VAZIO);
+    setCasos(null);
   };
 
   // Limpeza de melhor esforço ao sair da página.
@@ -54,62 +52,64 @@ export function App() {
     return () => window.removeEventListener("pagehide", limparTudo);
   }, []);
 
-  const selecionar = async (id: Id, arquivo: File) => {
-    const minha = ++geracao.current[id];
-    setSlots((s) => ({ ...s, [id]: { estado: "lendo", nome: arquivo.name } }));
-    let novo: Slot;
-    try {
-      novo = { estado: "ok", doc: await lerPdf(arquivo) };
-    } catch (e) {
-      const mensagem = e instanceof ErroLeitura ? e.message : "Não foi possível ler o PDF.";
-      novo = { estado: "erro", nome: arquivo.name, mensagem };
+  // Atualiza um arquivo pelo id; se ele já foi removido, a leitura que terminou depois é descartada.
+  const atualizar = (lado: Lado, id: number, novo: ArquivoLido<Recibo> | ArquivoLido<Repasse>) =>
+    setArquivos((s) => ({ ...s, [lado]: s[lado].map((a) => (a.id === id ? novo : a)) }));
+
+  const adicionar = async (lado: Lado, lista: File[]) => {
+    const novos = lista.map((arquivo) => ({ id: ++proximoId.current, nome: arquivo.name, arquivo }));
+    setArquivos((s) => ({
+      ...s,
+      [lado]: [...s[lado], ...novos.map(({ id, nome }) => ({ id, nome, estado: "lendo" as const }))],
+    }));
+    for (const { id, nome, arquivo } of novos) {
+      try {
+        const doc = await lerPdf(arquivo);
+        if (doc.possivelmenteDigitalizado)
+          throw new ErroLeitura(
+            "Este PDF não tem texto (provavelmente foi gerado por “Imprimir”). Exporte o relatório direto do NIDO.",
+          );
+        const registros = LADOS[lado].ler(doc.paginas, nome);
+        if (!registros.length)
+          throw new ErroLeitura(`Nenhum “${LADOS[lado].titulo}” encontrado. Confira se este é o relatório certo do NIDO.`);
+        atualizar(lado, id, { id, nome, estado: "ok", paginas: doc.paginas.length, registros } as ArquivoLido<Recibo>);
+      } catch (e) {
+        const mensagem = e instanceof ErroLeitura ? e.message : "Não foi possível ler o PDF.";
+        atualizar(lado, id, { id, nome, estado: "erro", mensagem });
+      }
     }
-    if (geracao.current[id] === minha) setSlots((s) => ({ ...s, [id]: novo }));
   };
 
-  const remover = (id: Id) => {
-    geracao.current[id]++;
-    setSlots((s) => ({ ...s, [id]: { estado: "vazio" } }));
-  };
+  const remover = (lado: Lado, id: number) =>
+    setArquivos((s) => ({ ...s, [lado]: s[lado].filter((a) => a.id !== id) }));
 
-  const { A, B } = slots;
+  const lidos = <T,>(lista: ArquivoLido<T>[]) => lista.flatMap((a) => (a.estado === "ok" ? a.registros : []));
+  const todos = [...arquivos.recibos, ...arquivos.repasses];
   const prontos =
-    A.estado === "ok" && B.estado === "ok" && !A.doc.possivelmenteDigitalizado && !B.doc.possivelmenteDigitalizado;
+    !todos.some((a) => a.estado !== "ok") && lidos(arquivos.recibos).length > 0 && lidos(arquivos.repasses).length > 0;
 
-  const iniciar = async () => {
-    if (A.estado !== "ok" || B.estado !== "ok") return;
-    const textos = { A: A.doc.paginas, B: B.doc.paginas };
-    controlador.current = new AbortController();
-    setAnalise({ fase: "enviando" });
-    try {
-      const resultado = await analisar(
-        { documentos: [{ id: "A", paginas: textos.A }, { id: "B", paginas: textos.B }] },
-        controlador.current.signal,
-      );
-      const refs = [...resultado.itens.map((i) => i.referencia), ...resultado.divergencias.flatMap((d) => d.referencias)];
-      setAnalise({ fase: "concluido", resultado, conferidas: conferirReferencias(refs, textos) });
-    } catch (e) {
-      if ((e as Error).name === "AbortError") return;
-      const msg = e instanceof ErroApi ? e.message : "Ocorreu um erro inesperado.";
-      setAnalise({ fase: "erro", mensagem: `${msg} Selecione os documentos novamente para repetir.` });
-    } finally {
-      controlador.current = null;
-      // Textos extraídos não são mais necessários: só o resultado permanece.
-      geracao.current = { A: geracao.current.A + 1, B: geracao.current.B + 1 };
-      setSlots(VAZIO);
-    }
+  const iniciar = () => {
+    setCasos(conferir(lidos(arquivos.recibos), lidos(arquivos.repasses)));
+    // Os dados lidos não são mais necessários: só o resultado permanece. No modo "um", os recibos ficam
+    // carregados para o próximo extrato.
+    setArquivos(modo === "um" ? { recibos: arquivos.recibos, repasses: [] } : VAZIO);
   };
 
   const pedirLimpeza = () => {
-    if (analise.fase === "concluido" && !confirm("Limpar a análise? O resultado não poderá ser recuperado.")) return;
+    if (casos && !confirm("Começar uma nova conferência? O resultado atual não poderá ser recuperado.")) return;
     limparTudo();
   };
 
-  const ocupado = analise.fase === "enviando";
+  const trocarModo = (novo: Modo) => {
+    if (novo === modo) return;
+    if ((casos || todos.length) && !confirm("Trocar de modo apaga os arquivos e o resultado atuais. Continuar?")) return;
+    limparTudo();
+    setModo(novo);
+  };
 
   const encerrar = async () => {
     if (desenvolvimento && usuario?.includes("@")) return setAvisoSair(true); // login simulado
-    if (analise.fase === "concluido" && !confirm("Sair agora apaga o resultado da análise. Continuar?")) return;
+    if (casos && !confirm("Sair agora apaga o resultado da conferência. Continuar?")) return;
     limparTudo();
     await sair().catch(() => undefined); // mesmo se falhar, a tela volta ao login; o cookie expira sozinho
     setUsuario(null);
@@ -159,56 +159,67 @@ export function App() {
           </p>
         ) : (
           <>
-            <h1>Análise de documentos</h1>
+            <h1>Conferência de repasses</h1>
             <p className="subtitulo">
-              Os PDFs são lidos no seu computador. Apenas o texto extraído é enviado para análise, e nada é salvo.
+              Recibos do Locatário × Extratos de Repasse exportados do NIDO. Os PDFs são lidos e conferidos no seu
+              computador: nada é enviado nem salvo.
             </p>
 
-            {analise.fase !== "concluido" && (
+            <div className="modos" role="group" aria-label="Modo de conferência">
+              <button type="button" className="modo" aria-pressed={modo === "geral"} onClick={() => trocarModo("geral")}>
+                <strong>Conferência geral</strong>
+                <span>Todos os recibos × todos os extratos de uma vez</span>
+              </button>
+              <button type="button" className="modo" aria-pressed={modo === "um"} onClick={() => trocarModo("um")}>
+                <strong>Extratos separados</strong>
+                <span>Os recibos ficam carregados; confira um ou vários extratos por vez</span>
+              </button>
+            </div>
+            {modo === "um" && (
+              <p className="alerta">
+                Neste modo, repasse em dobro só é detectado entre os extratos da mesma conferência: o app não guarda as
+                conferências anteriores.
+              </p>
+            )}
+
+            {!casos && (
               <div className="seletores">
-                {(["A", "B"] as const).map((id) => (
+                {(["recibos", "repasses"] as const).map((lado) => (
                   <SeletorPdf
-                    key={id}
-                    rotulo={`Documento ${id}`}
-                    slot={slots[id]}
-                    desabilitado={ocupado}
-                    aoSelecionar={(f) => selecionar(id, f)}
-                    aoRemover={() => remover(id)}
+                    key={lado}
+                    rotulo={LADOS[lado].rotulo}
+                    plural={LADOS[lado].plural}
+                    arquivos={arquivos[lado]}
+                    desabilitado={false}
+                    aoSelecionar={(f) => adicionar(lado, f)}
+                    aoRemover={(id) => remover(lado, id)}
                   />
                 ))}
               </div>
             )}
 
-            {analise.fase === "erro" && (
-              <p className="erro" role="alert">
-                {analise.mensagem}
-              </p>
-            )}
-
             <div className="acoes">
-              {analise.fase !== "concluido" && !ocupado && (
+              {!casos ? (
                 <button type="button" className="botao" disabled={!prontos} onClick={iniciar}>
-                  Analisar documentos
+                  Conferir
                 </button>
-              )}
-              {ocupado && (
+              ) : modo === "um" ? (
                 <>
-                  <p role="status" className="status">
-                    Analisando documentos. Isso pode levar até 2 minutos…
-                  </p>
-                  <button type="button" className="botao botao--secundario" onClick={limparTudo}>
-                    Cancelar
+                  <button type="button" className="botao" onClick={() => setCasos(null)}>
+                    Conferir outros extratos
+                  </button>
+                  <button type="button" className="botao botao--secundario" onClick={pedirLimpeza}>
+                    Trocar os recibos
                   </button>
                 </>
-              )}
-              {(analise.fase === "concluido" || analise.fase === "erro") && (
+              ) : (
                 <button type="button" className="botao botao--secundario" onClick={pedirLimpeza}>
-                  Limpar análise
+                  Nova conferência
                 </button>
               )}
             </div>
 
-            {analise.fase === "concluido" && <Resultado resultado={analise.resultado} conferidas={analise.conferidas} />}
+            {casos && <Resultado casos={casos} modo={modo} />}
           </>
         )}
       </main>

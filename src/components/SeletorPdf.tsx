@@ -1,36 +1,30 @@
 import { useId, useState } from "react";
-import type { DocumentoLido } from "../pdf/extrair";
 
-export type Slot =
-  | { estado: "vazio" }
-  | { estado: "lendo"; nome: string }
-  | { estado: "ok"; doc: DocumentoLido }
-  | { estado: "erro"; nome: string; mensagem: string };
+export type ArquivoLido<T> = { id: number; nome: string } & (
+  | { estado: "lendo" }
+  | { estado: "ok"; paginas: number; registros: T[] }
+  | { estado: "erro"; mensagem: string }
+);
 
 type Props = {
   rotulo: string;
-  slot: Slot;
+  /** Nome do registro no plural, para o resumo ("recibos", "extratos"). */
+  plural: string;
+  arquivos: ArquivoLido<unknown>[];
   desabilitado: boolean;
-  aoSelecionar: (arquivo: File) => void;
-  aoRemover: () => void;
+  aoSelecionar: (arquivos: File[]) => void;
+  aoRemover: (id: number) => void;
 };
 
-const formatarTamanho = (b: number) =>
-  b < 1024 * 1024 ? `${Math.ceil(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
-
-export function SeletorPdf({ rotulo, slot, desabilitado, aoSelecionar, aoRemover }: Props) {
+export function SeletorPdf({ rotulo, plural, arquivos, desabilitado, aoSelecionar, aoRemover }: Props) {
   const id = useId();
   const [arrastando, setArrastando] = useState(false);
-
-  const receber = (arquivos: FileList | null) => {
-    if (!arquivos?.length) return;
-    if (arquivos.length > 1) return alert("Selecione apenas um arquivo por documento.");
-    aoSelecionar(arquivos[0]);
-  };
+  const receber = (lista: FileList | null) => lista?.length && aoSelecionar([...lista]);
+  const estado = arquivos.some((a) => a.estado === "erro") ? "erro" : arquivos.length ? "ok" : "vazio";
 
   return (
     <section
-      className={`seletor ${arrastando ? "seletor--arrastando" : ""} seletor--${slot.estado}`}
+      className={`seletor ${arrastando ? "seletor--arrastando" : ""} seletor--${estado}`}
       onDragOver={(e) => {
         e.preventDefault();
         if (!desabilitado) setArrastando(true);
@@ -45,61 +39,49 @@ export function SeletorPdf({ rotulo, slot, desabilitado, aoSelecionar, aoRemover
     >
       <h2 id={`${id}-titulo`}>{rotulo}</h2>
 
-      {slot.estado === "vazio" && (
-        <>
-          <p className="seletor__dica">Arraste o PDF aqui ou</p>
-          <label className="botao botao--secundario" htmlFor={id}>
-            Selecionar arquivo
-          </label>
-          <input
-            id={id}
-            className="visualmente-oculto"
-            type="file"
-            accept="application/pdf,.pdf"
-            disabled={desabilitado}
-            onChange={(e) => receber(e.target.files)}
-          />
-        </>
+      {arquivos.length > 0 && (
+        <ul className="seletor__lista">
+          {arquivos.map((a) => (
+            <li key={a.id}>
+              <strong>{a.nome}</strong>
+              {a.estado === "lendo" && <span role="status"> · lendo…</span>}
+              {a.estado === "ok" && (
+                <span>
+                  {" "}
+                  · {a.paginas} {a.paginas === 1 ? "página" : "páginas"} · {a.registros.length} {a.registros.length === 1 ? plural.replace(/s$/, "") : plural}
+                </span>
+              )}
+              {a.estado === "erro" && (
+                <span className="erro" role="alert">
+                  {a.mensagem}
+                </span>
+              )}{" "}
+              {a.estado !== "lendo" && (
+                <button type="button" className="botao botao--texto" onClick={() => aoRemover(a.id)} disabled={desabilitado}>
+                  Remover
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
 
-      {slot.estado === "lendo" && (
-        <p role="status">
-          Lendo <strong>{slot.nome}</strong>…
-        </p>
-      )}
-
-      {slot.estado === "ok" && (
-        <>
-          <dl className="seletor__info">
-            <dt>Arquivo</dt>
-            <dd>{slot.doc.nome}</dd>
-            <dt>Tamanho</dt>
-            <dd>{formatarTamanho(slot.doc.tamanho)}</dd>
-            <dt>Páginas</dt>
-            <dd>{slot.doc.paginas.length}</dd>
-            <dt>Situação</dt>
-            <dd>{slot.doc.possivelmenteDigitalizado ? "Pouco texto encontrado" : "Válido"}</dd>
-          </dl>
-          {slot.doc.possivelmenteDigitalizado && (
-            <p className="alerta" role="alert">
-              Este documento parece ser digitalizado (imagem). Quase nenhum texto pôde ser extraído, e a análise
-              ficaria incompleta. O reconhecimento de texto (OCR) ainda não está disponível.
-            </p>
-          )}
-        </>
-      )}
-
-      {slot.estado === "erro" && (
-        <p className="erro" role="alert">
-          <strong>{slot.nome}:</strong> {slot.mensagem}
-        </p>
-      )}
-
-      {(slot.estado === "ok" || slot.estado === "erro") && (
-        <button type="button" className="botao botao--texto" onClick={aoRemover} disabled={desabilitado}>
-          Remover
-        </button>
-      )}
+      <p className="seletor__dica">Arraste os PDFs exportados do NIDO aqui ou</p>
+      <label className="botao botao--secundario" htmlFor={id}>
+        {arquivos.length ? "Adicionar arquivos" : "Selecionar arquivos"}
+      </label>
+      <input
+        id={id}
+        className="visualmente-oculto"
+        type="file"
+        multiple
+        accept="application/pdf,.pdf"
+        disabled={desabilitado}
+        onChange={(e) => {
+          receber(e.target.files);
+          e.target.value = ""; // permite escolher o mesmo arquivo de novo depois de removê-lo
+        }}
+      />
     </section>
   );
 }

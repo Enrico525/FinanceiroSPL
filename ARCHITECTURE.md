@@ -4,9 +4,10 @@
 Navegador (React)
   ├─ Tela de login: nome + senha (sem sessão)
   ├─ PDF.js (worker servido pelo app) → texto por página
-  ├─ Conferência determinística dos trechos citados
+  ├─ src/nido/ler.ts: lê Recibos do Locatário e Extratos de Repasse do NIDO
+  ├─ src/nido/conferir.ts: regras de conferência (docs/REGRAS-CONFERENCIA.md), sem IA
   └─ Estado apenas em memória
-        │ HTTPS · JSON com texto (nunca o PDF) · cookie de sessão HttpOnly
+        │ HTTPS · só login/sessão (a conferência não envia dados)
         ▼
 Cloudflare Worker (Static Assets + /api/* + /auth/*)
   ├─ /auth/*: login por nome + senha (hash no Secret USUARIOS), sessão em cookie assinado
@@ -38,14 +39,16 @@ Erros da API: `{ "erro": CodigoErro }` (ver `shared/contrato.ts`). O frontend tr
 - **Revogação:** `npm run usuarios -- remover` + `publicar` (imediato) ou trocar `SESSION_SECRET` (derruba todos).
 - Os arquivos estáticos (HTML/JS/CSS/logo) são públicos e não contêm dados; tudo que tem dado passa pela API.
 
-## Fluxo da análise
+## Fluxo da conferência (todo no navegador)
 
-1. Usuário seleciona A e B → `lerPdf` valida tamanho, assinatura `%PDF-`, senha, corrupção, nº de páginas e extrai texto.
-2. Documento com pouco texto é marcado como possivelmente digitalizado e **bloqueia** a análise (OCR ainda não existe).
-3. `POST /api/analisar` com `{ documentos: [{ id: "A", paginas }, { id: "B", paginas }] }`, sem nome de arquivo.
-4. Worker valida e chama a OpenAI; valida a resposta contra o contrato.
-5. Navegador confere se cada `trecho_literal` existe na página citada; referências não encontradas são destacadas.
-6. Textos são descartados; só o resultado fica na tela até "Limpar análise", cancelamento, erro ou saída da página.
+1. Usuário adiciona PDFs de recibos e de extratos → `lerPdf` valida tamanho, assinatura `%PDF-`, senha, corrupção,
+   nº de páginas e extrai texto.
+2. PDF sem texto (impresso via “Microsoft Print to PDF”) é recusado: o relatório precisa ser exportado do NIDO.
+3. `lerRecibos`/`lerRepasses` transformam o texto em registros; arquivo sem nenhum registro é recusado.
+4. `conferir` casa recibo × extrato por contrato + vencimento e aplica as regras (valores em centavos).
+5. Os registros lidos são descartados; só o resultado fica na tela até "Nova conferência" ou saída da página.
+
+A rota `/api/analisar` (OpenAI) continua no Worker, mas o app não a usa mais.
 
 ## Limites (provisórios, `shared/contrato.ts`)
 
@@ -60,4 +63,3 @@ Erros da API: `{ "erro": CodigoErro }` (ver `shared/contrato.ts`). O frontend tr
 
 - Divisão de documentos grandes em várias etapas (coordenada pelo navegador, Worker sem estado).
 - OCR local.
-- Conferência de valores em centavos (depende das regras de negócio).
