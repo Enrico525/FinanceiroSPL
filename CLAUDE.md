@@ -1,7 +1,8 @@
 # Contexto do projeto
 
-Plataforma **interna** da Special Imóveis para conferir dois PDFs financeiros (Documento A e B) com IA.
-Toda a aplicação em **português brasileiro**.
+Plataforma **interna** da Special Imóveis para conferir **Recibos do Locatário × Extratos de Repasse** exportados do
+sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`src/nido/`); regras de negócio em
+`docs/REGRAS-CONFERENCIA.md`. Toda a aplicação em **português brasileiro**.
 
 ## Regras inegociáveis
 
@@ -24,16 +25,23 @@ Toda a aplicação em **português brasileiro**.
 - Contrato frontend↔Worker em `shared/contrato.ts` (zod). O mesmo schema vira o JSON Schema enviado à OpenAI.
 - Conferência de referências: todo `trecho_literal` citado pela IA é procurado na página indicada (`src/conferencia.ts`).
 
+- Conferência NIDO (11/2026): os PDFs do NIDO têm layout fixo, então a leitura (`src/nido/ler.ts`) e as regras
+  (`src/nido/conferir.ts`) são determinísticas, em centavos inteiros. A IA foi dispensada; `worker/openai.ts` e
+  `/api/analisar` continuam no Worker sem uso pelo app.
+- PDF gerado por "Imprimir → Microsoft Print to PDF" não tem texto (letras viram desenho): o app recusa e pede o
+  relatório exportado direto do NIDO. OCR não é necessário.
+- Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
+
 ## Pendências (aguardando o negócio)
 
-- Tipos dos documentos A/B e critérios de conferência → definem `ResultadoAnalise` e o prompt (marcados PROVISÓRIO).
-- Conferência de valores em centavos (somas/totais) — depende das regras.
-- Domínio próprio, modelo da OpenAI.
-- OCR (Tesseract.js self-hosted) e divisão de documentos grandes — só após validar com documentos reais.
+- Validar com um par recibo × extrato do mesmo lote (os exemplos recebidos eram de lotes diferentes).
+- "Taxa Adm" aparecendo no **recibo** (ex.: contrato 7840): regra não definida.
+- Juros entram na base da taxa ADM? Ainda não apareceu caso real.
+- Remover ou manter a rota OpenAI no Worker; domínio próprio.
 
 ## Estrutura
 
-- `src/` frontend (`pdf/extrair.ts` leitura local, `conferencia.ts`, `api.ts`, `components/`)
+- `src/` frontend (`pdf/extrair.ts` leitura local, `nido/ler.ts` + `nido/conferir.ts` conferência, `api.ts`, `components/`)
 - `worker/` API (`auth.ts` sessão + lista, `login.ts` nome/senha, `sessao.ts` cookies assinados, `openai.ts`, `index.ts` rotas/validação/rate limit)
 - `shared/` contrato e limites
 

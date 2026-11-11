@@ -1,22 +1,22 @@
 # Conferência Financeira — Special Imóveis
 
-Ferramenta interna para conferir dois documentos financeiros em PDF com auxílio de IA.
-Os PDFs são lidos **no navegador**; apenas o texto extraído é enviado para análise. Nada é armazenado.
+Ferramenta interna para conferir os **Recibos do Locatário** contra os **Extratos de Repasse** exportados do NIDO.
+Os PDFs são lidos e conferidos **no navegador**: nada é enviado nem armazenado.
 
 **Endereço:** <https://financeirospl.specialimoveis.workers.dev> (acesso só com nome e senha cadastrados)
 
-> **Status:** em teste. Login, leitura dos PDFs e publicação funcionando.
-> Pendente: configurar a OpenAI e definir as regras de conferência (tipos dos documentos A e B).
-> OCR e divisão de documentos grandes ainda não implementados.
+> **Status:** em teste. Regras de conferência em [docs/REGRAS-CONFERENCIA.md](docs/REGRAS-CONFERENCIA.md).
+> Falta validar com um par de recibos e extratos do mesmo lote.
 
 ## Como funciona
 
 1. A pessoa entra com **nome + senha** (senha gerada pelo administrador).
-2. Seleciona o **Documento A** e o **Documento B** (PDF). O arquivo é lido no próprio computador.
-3. Só o texto extraído vai para a análise (Cloudflare Worker → OpenAI, sem armazenamento).
-4. O resultado aparece na tela com a página de origem de cada informação; trechos que não forem
-   encontrados no documento são destacados para conferência manual.
-5. “Limpar análise”, “Sair” ou fechar a página apagam tudo. Não há histórico.
+2. Adiciona os PDFs de **Recibo do Locatário** e de **Extrato de Repasse**, exportados direto do NIDO
+   (não use “Imprimir”: esse PDF não tem texto). Pode ser mais de um arquivo de cada lado.
+3. O navegador lê os relatórios e aplica as regras. Nenhum dado sai do computador.
+4. O resultado mostra as **divergências**, os casos para **conferência manual** e os contratos sem divergência,
+   com o arquivo e a página de cada um.
+5. “Nova conferência”, “Sair” ou fechar a página apagam tudo. Não há histórico.
 
 ## Gerenciar acessos
 

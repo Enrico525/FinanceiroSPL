@@ -36,6 +36,14 @@ h2 { font-size: 1.05rem; margin: 0 0 0.75rem; font-weight: 700; }
 .conteudo { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; }
 .subtitulo { margin: 0 0 1.5rem; font-size: 0.95rem; }
 
+.modos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+.modo {
+  display: flex; flex-direction: column; gap: 0.2rem; text-align: left; font: inherit; color: var(--vinho); cursor: pointer;
+  background: var(--creme); border: 2px solid var(--linha); border-radius: var(--raio); padding: 0.75rem 1rem;
+}
+.modo span { font-size: 0.85rem; }
+.modo[aria-pressed="true"] { background: var(--vinho); color: var(--creme); border-color: var(--vinho); }
+.modo:focus-visible { outline: 3px solid var(--vinho); outline-offset: 2px; }
 .seletores { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
 .seletor {
   background: var(--creme); border: 2px dashed var(--linha); border-radius: var(--raio);
@@ -98,15 +106,28 @@ input:focus-visible + .botao, label.botao:focus-within { outline: 3px solid var(
 .resultado ul { margin: 0; padding-left: 1.2rem; }
 .resultado li + li { margin-top: 0.4rem; }
 
-.tabela-rolagem { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--linha); vertical-align: top; }
-th { font-weight: 700; border-bottom: 2px solid var(--vinho); }
-td.numero { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.seletor__lista { margin: 0; padding-left: 1.1rem; font-size: 0.9rem; align-self: stretch; word-break: break-word; }
+.seletor__lista .erro { display: block; font-weight: 400; margin-top: 0.2rem; }
+
+.resumo-numeros { margin: 0; font-size: 1.05rem; }
+.resultado ul.casos { list-style: none; padding: 0; }
+.caso { border-top: 1px solid var(--linha); padding-top: 0.75rem; }
+.resultado .caso + .caso { margin-top: 0.75rem; }
+.caso p { margin: 0 0 0.35rem; }
+.caso__pessoas { font-size: 0.9rem; }
+.caso ul { padding-left: 0; list-style: none; }
+.grupo + .grupo { margin-top: 1.25rem; }
+.grupo h3 { margin: 0.75rem 0 0.25rem; font-size: 1rem; }
+.grupo__contratos { margin: 0 0 0.5rem; font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.resultado summary { cursor: pointer; }
+.resultado summary h2 { display: inline; }
 
 .ref { display: inline-block; font-size: 0.8rem; margin-right: 0.5rem; }
-.ref--nao-conferida { font-weight: 700; text-decoration: underline wavy; text-underline-offset: 3px; }
 .selo {
   display: inline-block; font-size: 0.75rem; font-weight: 700; background: var(--bege);
   border: 1px solid var(--vinho); border-radius: 999px; padding: 0 0.5rem;
 }
+/* Só as cores da marca: divergência em destaque cheio, manual contornado, aviso tracejado. */
+.selo--divergencia { background: var(--vinho); color: var(--creme); }
+.selo--manual { background: var(--creme); }
+.selo--aviso { background: transparent; border-style: dashed; font-weight: 400; }
