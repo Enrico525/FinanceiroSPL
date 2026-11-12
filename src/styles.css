@@ -49,7 +49,10 @@ h2 { font-size: 1.05rem; margin: 0 0 0.75rem; font-weight: 700; }
   background: var(--creme); border: 2px dashed var(--linha); border-radius: var(--raio);
   padding: 1.25rem; min-height: 200px; display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem;
 }
-.seletor--ok { border-style: solid; border-color: var(--vinho); }
+/* PDF recebido: quadro inteiro preenchido em vinho, conteúdo em creme. */
+.seletor--ok { border-style: solid; border-color: var(--vinho); background: var(--vinho); color: var(--creme); }
+.seletor--ok .botao--texto, .seletor--ok .botao--texto:hover:not(:disabled) { color: var(--creme); }
+.seletor--ok :focus-visible { outline-color: var(--creme); }
 .seletor--erro { border-style: solid; border-color: var(--vinho); border-left-width: 6px; }
 .seletor--arrastando { border-style: dashed; border-color: var(--vinho); background: var(--bege); }
 .seletor__dica { margin: 0; }
@@ -109,20 +112,38 @@ input:focus-visible + .botao, label.botao:focus-within { outline: 3px solid var(
 .seletor__lista { margin: 0; padding-left: 1.1rem; font-size: 0.9rem; align-self: stretch; word-break: break-word; }
 .seletor__lista .erro { display: block; font-weight: 400; margin-top: 0.2rem; }
 
-.resumo-numeros { margin: 0; font-size: 1.05rem; }
-.resultado ul.casos { list-style: none; padding: 0; }
-.caso { border-top: 1px solid var(--linha); padding-top: 0.75rem; }
-.resultado .caso + .caso { margin-top: 0.75rem; }
-.caso p { margin: 0 0 0.35rem; }
-.caso__pessoas { font-size: 0.9rem; }
+.resultado ul.placar { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.resultado .placar li + li { margin-top: 0; }
+.placar__item {
+  background: var(--creme); border: 1px solid var(--linha); border-radius: var(--raio);
+  padding: 0.5rem 0.85rem; font-size: 0.9rem;
+}
+.placar__item strong { font-size: 1.3rem; margin-right: 0.25rem; font-variant-numeric: tabular-nums; }
+.placar__item--divergencia { background: var(--vinho); color: var(--creme); border-color: var(--vinho); }
+.resultado ul.casos { list-style: none; padding: 0; margin-top: 0.75rem; }
+.caso { border-top: 1px solid var(--linha); padding-top: 0.6rem; }
+.resultado .caso + .caso { margin-top: 0.6rem; }
+.caso p { margin: 0 0 0.25rem; }
+.caso__meta { font-size: 0.8rem; opacity: 0.8; word-break: break-word; }
 .caso ul { padding-left: 0; list-style: none; }
-.grupo + .grupo { margin-top: 1.25rem; }
-.grupo h3 { margin: 0.75rem 0 0.25rem; font-size: 1rem; }
-.grupo__contratos { margin: 0 0 0.5rem; font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-.resultado summary { cursor: pointer; }
-.resultado summary h2 { display: inline; }
+.nota { margin: 0.5rem 0 0; font-size: 0.9rem; }
+.botao--relatorio { align-self: flex-start; }
 
-.ref { display: inline-block; font-size: 0.8rem; margin-right: 0.5rem; }
+.relatorio { background: var(--creme); border: 1px solid var(--linha); border-radius: var(--raio); padding: 1.25rem; }
+.relatorio h2 { margin: 0 0 0.25rem; }
+.relatorio__caso { border-top: 1px solid var(--linha); padding: 0.6rem 0; break-inside: avoid; }
+.relatorio__caso p { margin: 0 0 0.25rem; }
+.relatorio ul { margin: 0; padding: 0; list-style: none; font-size: 0.9rem; }
+.relatorio li + li { margin-top: 0.2rem; }
+.conferido span { font-weight: 700; color: var(--vinho); margin-right: 0.15rem; }
+
+@media print {
+  .topo, .aviso-topo, .subtitulo, .modos, .alerta, .nao-imprimir, .conteudo > .acoes { display: none !important; }
+  body, .relatorio { background: #fff; color: #000; }
+  .relatorio { border: none; padding: 0; }
+}
+.resultado summary { cursor: pointer; }
+.resultado summary h2 { display: inline; font-size: 1.1rem; }
 .selo {
   display: inline-block; font-size: 0.75rem; font-weight: 700; background: var(--bege);
   border: 1px solid var(--vinho); border-radius: 999px; padding: 0 0.5rem;
@@ -131,3 +152,26 @@ input:focus-visible + .botao, label.botao:focus-within { outline: 3px solid var(
 .selo--divergencia { background: var(--vinho); color: var(--creme); }
 .selo--manual { background: var(--creme); }
 .selo--aviso { background: transparent; border-style: dashed; font-weight: 400; }
+.selo--aceito { background: var(--bege); font-weight: 600; }
+.caso .botao--texto { font-size: 0.85rem; margin-top: 0.25rem; }
+.relatorio__contrato { font-size: 1.05rem; }
+.relatorio__proprietario { font-size: 1.05rem; }
+.totais { border: 2px solid var(--vinho); border-radius: var(--raio); padding: 1rem; margin: 0.75rem 0 1rem; break-inside: avoid; }
+.totais__geral { margin: 0; font-size: 1.2rem; }
+.totais__geral strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.totais__bancos { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
+.totais__bancos th, .totais__bancos td { padding: 0.4rem 0.5rem; border-top: 1px solid var(--linha); text-align: left; }
+.totais__bancos td:last-child, .totais__bancos thead th:last-child { text-align: right; }
+.totais__bancos td:nth-child(2), .totais__bancos thead th:nth-child(2) { text-align: center; }
+.totais__bancos td strong { font-size: 1.1rem; }
+.totais__bancos thead th { font-size: 0.8rem; border-top: none; }
+.totais__inclui { display: block; font-weight: 400; }
+.totais__sem-banco th, .totais__sem-banco td { background: var(--vinho); color: var(--creme); }
+.sem-banco { margin-top: 0.75rem; padding: 0.75rem; border: 1px solid var(--linha); border-radius: var(--raio); }
+.sem-banco--pendente { border: 3px solid var(--vinho); }
+.sem-banco__titulo { margin: 0 0 0.5rem; }
+.sem-banco__contrato { font-size: 1.15rem; background: var(--vinho); color: var(--creme); padding: 0 0.4rem; border-radius: 4px; }
+.relatorio .sem-banco li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1rem; padding: 0.35rem 0; border-top: 1px solid var(--linha); margin: 0; }
+.sem-banco__opcoes { display: flex; gap: 1rem; }
+.sem-banco__opcoes label { cursor: pointer; font-weight: 600; }
+.sem-banco__opcoes input { accent-color: var(--vinho); }

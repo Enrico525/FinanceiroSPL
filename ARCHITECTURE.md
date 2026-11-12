@@ -57,7 +57,7 @@ A rota `/api/analisar` (OpenAI) continua no Worker, mas o app não a usa mais.
 ## Ambientes
 
 - **Desenvolvimento:** `npm run dev` + `.dev.vars` (login simulado só em localhost).
-- **Teste/produção:** `*.workers.dev` (depois domínio próprio), variáveis em `wrangler.jsonc`, segredos como Secret.
+- **Teste/produção:** `*.workers.dev` (sem domínio próprio: uso temporário), variáveis em `wrangler.jsonc`, segredos como Secret.
 
 ## Ainda não implementado
 
