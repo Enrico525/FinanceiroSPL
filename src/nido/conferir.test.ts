@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conferir, taxaAdmEsperada } from "./conferir";
+import { conferir, taxaAdmEsperada, totais } from "./conferir";
 import type { LinhaRepasse, Recibo, Repasse } from "./ler";
 
 const V = "05/11/2026";
@@ -26,6 +26,7 @@ const repasse = (linhas: [string, number, boolean, number?][], extra: Partial<Re
     arquivo: "repasses.pdf",
     pagina: 1,
     proprietario: "DONO",
+    banco: "",
     contrato: "100",
     endereco: "R Exemplo Nº 1",
     situacao: "Normal",
@@ -74,6 +75,49 @@ describe("conferência recibo × repasse", () => {
   it("situação Normal correta: sem apontamentos", () => {
     expect(textos([RECIBO_NORMAL], [REPASSE_NORMAL])).toEqual([]);
     expect(status([RECIBO_NORMAL], [REPASSE_NORMAL])).toEqual(["ok"]);
+  });
+
+  it("soma os repasses: Bradesco separado, todos os outros bancos no Itaú", () => {
+    const r = (n: string, valor: number, banco: string) => repasse([["Aluguel", valor, true]], { contrato: n, numero: n, banco });
+    const casos = conferir([], [
+      r("1", 100000, "BRADESCO"),
+      r("2", 30000, "SANTANDER"),
+      r("3", 50000, "Banco Bradesco S.A."),
+      r("4", 20000, "INTER"),
+      r("5", 10000, "ITAU"),
+      r("6", 7000, ""),
+    ]);
+    expect(totais(casos)).toMatchObject({
+      geral: 217000,
+      repasses: 6,
+      bancos: [
+        { banco: "BRADESCO", valor: 150000, repasses: 2, bancos: ["BRADESCO", "Banco Bradesco S.A."] },
+        { banco: "ITAÚ", valor: 60000, repasses: 3, bancos: ["SANTANDER", "INTER", "ITAU"] },
+        { banco: "", valor: 7000, repasses: 1, bancos: [] },
+      ],
+      semBanco: [{ chave: "6|DONO", valor: 7000, conta: null }],
+    });
+    // Escolhido Bradesco para o repasse sem banco: sai da linha à parte e soma no Bradesco.
+    expect(totais(casos, { "6|DONO": "BRADESCO" })).toMatchObject({
+      geral: 217000,
+      bancos: [
+        { banco: "BRADESCO", valor: 157000, repasses: 3 },
+        { banco: "ITAÚ", valor: 60000, repasses: 3 },
+      ],
+      semBanco: [{ chave: "6|DONO", conta: "BRADESCO" }],
+    });
+  });
+
+  it("registra o que foi conferido para o relatório", () => {
+    const [c] = conferir([RECIBO_NORMAL], [REPASSE_NORMAL]);
+    expect(c.conferidos.map((t) => t.replace(/ /g, " "))).toEqual([
+      "DONO: valor pago/a repassar R$ 2.700,00 igual ao líquido do extrato.",
+      "Taxa ADM de R$ 100,00 = (aluguel − abono + multa) × 5%.",
+      '"Aluguel 03/12" de R$ 2.000,00 repassado ao proprietário.',
+      '"Taxa de Expediente" de R$ 7,50 retido (não vai ao proprietário).',
+      '"IPTU 2026 10/10" de R$ 300,00 repassado ao proprietário.',
+      '"Condomínio" de R$ 500,00 repassado ao proprietário.',
+    ]);
   });
 
   it("aponta IPTU, condomínio e multa não repassados", () => {

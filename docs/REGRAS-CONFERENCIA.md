@@ -56,3 +56,11 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
 - Recibo sem extrato, ou extrato sem recibo (fora Aluguel Garantido e Pré-cadastro), aparece em seção própria
   ("Recibos sem extrato de repasse" / "Extratos sem recibo"), separada das divergências: pode ser só arquivo faltando.
   Mesmo contrato com vencimento diferente continua sendo divergência.
+
+## Totais do relatório
+
+- Soma só os **repasses** (valor pago/a repassar de cada extrato), nunca os valores do recibo.
+- Separada pela conta de onde sai a transferência: repasse para **Bradesco** sai do Bradesco; para **qualquer outro
+  banco** (Itaú, Banco do Brasil, Inter, Santander…) sai do **Itaú**.
+- Extrato **sem banco**: fica em linha à parte, destacada, até a pessoa escolher no relatório "Somar no Itaú" ou
+  "Somar no Bradesco" para cada repasse. A escolha vale só para aquela conferência (nada é guardado).

@@ -27,6 +27,8 @@ export type Repasse = {
   arquivo: string;
   pagina: number;
   proprietario: string;
+  /** Banco do repasse ao proprietário ("" quando o extrato não informa). */
+  banco: string;
   contrato: string;
   endereco: string;
   situacao: string;
@@ -46,6 +48,8 @@ const RE_RECIBO_LINHA = new RegExp(String.raw`^(?:${DATA}   )?(.+?)   ${VALOR}  
 const RE_REPASSE_LINHA = new RegExp(String.raw`^${DATA}   (.+?)   ${VALOR}   ([\d,]+)%   ${VALOR}   ${VALOR}$`);
 // "PAGAMENTO EFETUADO" (já pago) ou "PAGAMENTO AGUARDANDO EFETIVAÇÃO" (extrato pronto, repasse ainda não pago).
 const PAGAMENTO = /^PAGAMENTO (EFETUADO|AGUARDANDO)/;
+// Extrato ainda não pago: o valor a repassar vem só no total, na coluna crédito ("0,00   1.088,87").
+const RE_PENDENTE = new RegExp(String.raw`^Total Pendente\b.*?   ${VALOR}   ${VALOR}$`);
 
 /** "1.234,56" → 123456 (centavos, sem ponto flutuante). */
 export function centavos(v: string): number {
@@ -127,15 +131,20 @@ export function lerRecibos(paginas: PaginaExtraida[], arquivo = ""): Recibo[] {
 export function lerRepasses(paginas: PaginaExtraida[], arquivo = ""): Repasse[] {
   const repasses: Repasse[] = [];
   let proprietario = "";
+  let banco = "";
   let atual: Repasse | null = null;
   for (const { pagina, linha } of linhas(paginas)) {
     let m: RegExpMatchArray | null;
-    if ((m = linha.match(/^(.+?) - \(ID: \d+\)/))) proprietario = m[1];
+    if ((m = linha.match(/^(.+?) - \(ID: \d+\)/))) {
+      proprietario = m[1];
+      banco = "";
+    } else if (linha.startsWith("Pagamento:")) banco = linha.match(/Banco:   (.+?)   Ag\.:/)?.[1] ?? "";
     else if ((m = linha.match(CONTRATO))) {
       atual = {
         arquivo,
         pagina,
         proprietario,
+        banco,
         contrato: m[1],
         endereco: "",
         situacao: "",
@@ -156,7 +165,8 @@ export function lerRepasses(paginas: PaginaExtraida[], arquivo = ""): Repasse[] 
     } else if ((m = linha.match(/^Repasse:   (\d+) - Competência: (\d{2}\/\d{4})/))) {
       atual.numero = m[1];
       atual.competencia = m[2];
-    } else if ((m = linha.match(RE_REPASSE_LINHA))) {
+    } else if ((m = linha.match(RE_PENDENTE))) atual.pago += centavos(m[2]) - centavos(m[1]);
+    else if ((m = linha.match(RE_REPASSE_LINHA))) {
       const [, data, historico, bruto, part, deb, cred] = m;
       if (PAGAMENTO.test(historico)) atual.pago += centavos(deb);
       else {

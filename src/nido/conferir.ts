@@ -10,11 +10,15 @@ export type Caso = {
   situacao: string;
   inquilino: string;
   proprietarios: string[];
+  /** Um por extrato (proprietário): banco do repasse ("" = não informado) e valor pago/a repassar, em centavos. */
+  repasses: { proprietario: string; banco: string; valor: number }[];
   /** Onde achar no PDF: "arquivo.pdf, pág. 3". */
   onde: string[];
   /** sem_extrato / sem_recibo: o outro lado não está nos arquivos enviados. */
   status: "ok" | "divergencia" | "manual" | "sem_extrato" | "sem_recibo";
   apontamentos: Apontamento[];
+  /** O que foi conferido e bateu (para o relatório). */
+  conferidos: string[];
 };
 
 export const reais = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -74,7 +78,7 @@ function regraSituacao(situacao: string): { modo: Modo | null; manual: string | 
 const repassaEmSpecial = (h: string) => ehAluguel(h) || ehMulta(h) || ehAbono(h) || ehIrrf(h);
 
 /** Confere um recibo contra os extratos (um por proprietário) do mesmo contrato e vencimento. */
-function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento[]) {
+function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento[], ok: string[]) {
   const div = (texto: string) => ap.push({ tipo: "divergencia", texto });
   const r0 = repasses[0];
   const { modo, manual } = regraSituacao(r0.situacao);
@@ -102,6 +106,7 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
       const soma = partes.reduce((n, x) => n + x.credito + x.debito, 0);
       if (Math.abs(soma - bruto) > (partes.length > 1 ? partes.length : 0))
         div(`"${partes[0].historico}": as partes dos proprietários somam ${reais(soma)}, mas o total é ${reais(bruto)}.`);
+      else if (partes.length > 1) ok.push(`"${partes[0].historico}": partes dos proprietários somam o total de ${reais(bruto)}.`);
       continue;
     }
     // Só parte dos proprietários (ex.: um extrato por vez): confere cada parte pelo percentual impresso.
@@ -112,6 +117,7 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
       const esperado = Math.round((bruto * participacao(x.participacao)) / 10_000);
       if (Math.abs(x.credito + x.debito - esperado) > tolerancia)
         div(`"${x.historico}": parte de ${reais(x.credito + x.debito)} não confere com ${x.participacao}% de ${reais(bruto)} (${reais(esperado)}).`);
+      else ok.push(`"${x.historico}": parte de ${reais(x.credito + x.debito)} = ${x.participacao}% de ${reais(bruto)}.`);
     }
   }
   if (parcial)
@@ -119,7 +125,8 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
   for (const r of repasses) {
     const liquido = r.linhas.reduce((n, l) => n + l.credito - l.debito, 0);
     if (liquido !== r.pago)
-      div(`${r.proprietario}: valor pago ${reais(r.pago)} diferente do líquido do extrato ${reais(liquido)}.`);
+      div(`${r.proprietario}: valor pago/a repassar ${reais(r.pago)} diferente do líquido do extrato ${reais(liquido)}.`);
+    else ok.push(`${r.proprietario}: valor pago/a repassar ${reais(r.pago)} igual ao líquido do extrato.`);
   }
 
   if (modo === "pre-cadastro") {
@@ -148,13 +155,16 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
         tipo: "manual",
         texto: `Taxa de intermediação de ${reais(intermediacao.bruto)} diferente de 100% do aluguel (${reais(aluguel)}): conferir manualmente.`,
       });
+    else ok.push(`Taxa de intermediação de ${reais(intermediacao.bruto)} = 100% do aluguel.`);
   } else if (modo !== "pre-cadastro" && aluguel > 0) {
     if (!adm) div("Taxa ADM não descontada.");
     else if (r0.taxaAdm === null) ap.push({ tipo: "manual", texto: "Percentual da taxa ADM não encontrado no extrato." });
     else {
       const esperada = taxaAdmEsperada(linhas, r0.taxaAdm);
+      const pct = `${(r0.taxaAdm / 10000).toLocaleString("pt-BR")}%`;
       if (adm.bruto !== esperada)
-        div(`Taxa ADM de ${reais(adm.bruto)}; o esperado é ${reais(esperada)} ((aluguel − abono + multa) × ${(r0.taxaAdm / 10000).toLocaleString("pt-BR")}%).`);
+        div(`Taxa ADM de ${reais(adm.bruto)}; o esperado é ${reais(esperada)} ((aluguel − abono + multa) × ${pct}).`);
+      else ok.push(`Taxa ADM de ${reais(adm.bruto)} = (aluguel − abono + multa) × ${pct}.`);
     }
   }
 
@@ -193,7 +203,7 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
               ? `Multa repassada (${reais(valor)}), mas o contrato cobra taxa de intermediação: a multa deveria ficar retida.`
               : `"${h}" (${reais(valor)}) foi repassado, mas deveria ficar retido.`,
           );
-      }
+      } else ok.push(`"${h}" de ${reais(valor)} retido (não vai ao proprietário).`);
       continue;
     }
     if (!tirar(valor, vaiComoCredito, h))
@@ -202,6 +212,7 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
           ? `"${h}" de ${reais(valor)} não foi debitado do proprietário.`
           : `"${h}" de ${reais(valor)} não foi repassado ao proprietário.`,
       );
+    else ok.push(`"${h}" de ${reais(valor)} ${vaiComoCredito ? "repassado ao" : "debitado do"} proprietário.`);
   }
 
   for (const l of livres)
@@ -209,6 +220,38 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
     else if (l.credito > 0) div(`Crédito ao proprietário sem correspondente no recibo: "${l.historico}" ${reais(l.bruto)}.`);
     else if (!ehDebitoPrevisto(l.historico))
       ap.push({ tipo: "aviso", texto: `Débito ao proprietário sem origem no recibo: "${l.historico}" ${reais(l.bruto)}.` });
+}
+
+// Conta de onde sai a transferência: repasse para Bradesco sai do Bradesco; para qualquer outro banco, sai do Itaú.
+export const CONTA_BRADESCO = "BRADESCO";
+export const CONTA_ITAU = "ITAÚ";
+export type Conta = typeof CONTA_BRADESCO | typeof CONTA_ITAU;
+const contaDeSaida = (banco: string) => (!banco ? "" : simples(banco).includes("bradesco") ? CONTA_BRADESCO : CONTA_ITAU);
+export const chaveRepasse = (contrato: string, proprietario: string) => `${contrato}|${proprietario}`;
+
+/**
+ * Soma dos repasses (valor pago/a repassar), no geral e por conta de saída (maior primeiro).
+ * Repasse sem banco no extrato fica em "" até a pessoa escolher a conta em `escolhas` (chave: chaveRepasse).
+ */
+export function totais(casos: Caso[], escolhas: Record<string, Conta> = {}) {
+  const porConta = new Map<string, { valor: number; repasses: number; bancos: string[] }>();
+  const semBanco: { chave: string; contrato: string; proprietario: string; valor: number; conta: Conta | null }[] = [];
+  for (const c of casos)
+    for (const r of c.repasses) {
+      const chave = chaveRepasse(c.contrato, r.proprietario);
+      const escolhida = r.banco ? null : (escolhas[chave] ?? null);
+      if (!r.banco) semBanco.push({ chave, contrato: c.contrato, proprietario: r.proprietario, valor: r.valor, conta: escolhida });
+      const conta = escolhida ?? contaDeSaida(r.banco);
+      const nome = r.banco || "sem banco (escolhido)";
+      const t = porConta.get(conta) ?? { valor: 0, repasses: 0, bancos: [] };
+      porConta.set(conta, {
+        valor: t.valor + r.valor,
+        repasses: t.repasses + 1,
+        bancos: conta && !t.bancos.includes(nome) ? [...t.bancos, nome] : t.bancos,
+      });
+    }
+  const bancos = [...porConta].map(([banco, t]) => ({ banco, ...t })).sort((a, b) => b.valor - a.valor);
+  return { geral: bancos.reduce((n, b) => n + b.valor, 0), repasses: bancos.reduce((n, b) => n + b.repasses, 0), bancos, semBanco };
 }
 
 export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso[] {
@@ -234,6 +277,7 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
   for (const [k, g] of grupos) {
     const [contrato, vencimento] = k.split("|");
     const ap: Apontamento[] = [];
+    const ok: string[] = [];
     const r0 = g.repasses[0];
     const recibo = g.recibos[0] ?? null;
 
@@ -261,7 +305,7 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
       if (outro)
         ap.push({ tipo: "divergencia", texto: `Vencimento diferente: extrato de repasse ${vencimento}, recibo ${outro.vencimento}.` });
       else semPar = "sem_recibo";
-    } else conferirPar(recibo, unicos, ap);
+    } else conferirPar(recibo, unicos, ap, ok);
 
     casos.push({
       contrato,
@@ -269,7 +313,9 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
       competencia: r0?.competencia ?? "",
       situacao: r0?.situacao ?? "",
       inquilino: recibo?.locatario || r0?.inquilino || "",
-      proprietarios: unicos.map((r) => r.proprietario),
+      // Sem extrato, o proprietário vem do "LOCADOR" do recibo.
+      proprietarios: unicos.length ? unicos.map((r) => r.proprietario) : recibo?.locador ? [recibo.locador] : [],
+      repasses: unicos.map((r) => ({ proprietario: r.proprietario, banco: r.banco, valor: r.pago })),
       onde: [...g.recibos, ...g.repasses].map((r) => `${r.arquivo}, pág. ${r.pagina}`).filter((x, i, a) => a.indexOf(x) === i),
       status: ap.some((a) => a.tipo === "divergencia")
         ? "divergencia"
@@ -277,6 +323,7 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
           ? "manual"
           : (semPar ?? "ok"),
       apontamentos: ap,
+      conferidos: ok,
     });
   }
   const ordem = { divergencia: 0, manual: 1, sem_extrato: 2, sem_recibo: 3, ok: 4 };

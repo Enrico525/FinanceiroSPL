@@ -19,7 +19,7 @@ Total Geral Total Geral   0,00 0,00 `;
 
 const REPASSE = `Extrato de Repasse
 BELTRANO SILVA - (ID: 2) CPF: 000.000.000-00 BELTRANO SILVA - (ID: 2) CPF: 000.000.000-00
-Pagamento: Pagamento:   Transferência Bancária
+Pagamento: Pagamento:   Transferência Bancária   Banco: Banco:   BANCO TESTE   Ag.: Ag.:   0001   Conta: Conta:   00000-0
 Contrato 100 - R Exemplo Nº 1 Contrato 100 - R Exemplo Nº 1   - Und. 2, Bairro Cep: 00000-000 - São - Und. 2, Bairro Cep: 00000-000 - São
 Paulo -SP Paulo -SP
 Situação: Normal Situação: Normal
@@ -60,6 +60,7 @@ describe("leitura NIDO", () => {
     const [r] = lerRepasses([{ numero: 1, texto: REPASSE }]);
     expect(r).toMatchObject({
       proprietario: "BELTRANO SILVA",
+      banco: "BANCO TESTE",
       contrato: "100",
       situacao: "Normal",
       taxaAdm: 60000,
@@ -78,6 +79,21 @@ describe("leitura NIDO", () => {
     const texto = REPASSE.replace(
       /^10\/11\/2026   PAGAMENTO EFETUADO.*$/m,
       "11/11/2026   PAGAMENTO AGUARDANDO EFETIVAÇÃO PAGAMENTO AGUARDANDO EFETIVAÇÃO   2.432,21   100,00%   2.432,21   0,00",
+    );
+    const [r] = lerRepasses([{ numero: 1, texto }]);
+    expect(r.pago).toBe(243221);
+    expect(r.linhas).toHaveLength(2);
+  });
+
+  it("extrato sem banco informado", () => {
+    const texto = REPASSE.replace(/^Pagamento: .*$/m, "Pagamento: Pagamento:   Banco: Banco:   Ag.: Ag.:   Conta: Conta:");
+    expect(lerRepasses([{ numero: 1, texto }])[0].banco).toBe("");
+  });
+
+  it("extrato ainda não pago: usa o crédito do Total Pendente", () => {
+    const texto = REPASSE.replace(
+      /^10\/11\/2026   PAGAMENTO EFETUADO[\s\S]*$/m,
+      "Total de débitos e créditos Total de débitos e créditos   148,86 148,86   2.581,07 2.581,07\nTotal Pendente Contrato 100 Total Pendente Contrato 100   0,00 0,00   2.432,21 2.432,21 ",
     );
     const [r] = lerRepasses([{ numero: 1, texto }]);
     expect(r.pago).toBe(243221);

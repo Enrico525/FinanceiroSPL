@@ -28,6 +28,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Conferência NIDO (11/2026): os PDFs do NIDO têm layout fixo, então a leitura (`src/nido/ler.ts`) e as regras
   (`src/nido/conferir.ts`) são determinísticas, em centavos inteiros. A IA foi dispensada; `worker/openai.ts` e
   `/api/analisar` continuam no Worker sem uso pelo app.
+- Rota OpenAI (11/2026): fica no Worker, sem uso por enquanto; não remover sem o negócio pedir.
+- Hospedagem (11/2026): segue no `*.workers.dev` da Cloudflare, sem domínio próprio (uso temporário).
 - PDF gerado por "Imprimir → Microsoft Print to PDF" não tem texto (letras viram desenho): o app recusa e pede o
   relatório exportado direto do NIDO. OCR não é necessário.
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
@@ -37,7 +39,6 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Validar com um par recibo × extrato do mesmo lote (os exemplos recebidos eram de lotes diferentes).
 - "Taxa Adm" aparecendo no **recibo** (ex.: contrato 7840): regra não definida.
 - Juros entram na base da taxa ADM? Ainda não apareceu caso real.
-- Remover ou manter a rota OpenAI no Worker; domínio próprio.
 
 ## Estrutura
 
