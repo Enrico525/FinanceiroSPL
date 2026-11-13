@@ -36,7 +36,10 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 
 ## Pendências (aguardando o negócio)
 
-- Validar com um par recibo × extrato do mesmo lote (os exemplos recebidos eram de lotes diferentes).
+- Validar com um par recibo × extrato do mesmo lote. Lote de 13/11/2026: leitura ok em todos os PDFs, mas os extratos
+  cobriam só 2 de 47 contratos (14756 bateu inteiro; no 15215 a divergência do "Condomínio Prop" não repassado era
+  erro real, confirmado e corrigido pelo financeiro). Falta um lote com mais extratos.
+- Taxa de intermediação de 50% do aluguel (contrato 15215): válida ou a regra de 100% muda? Hoje vira conferência manual.
 - "Taxa Adm" aparecendo no **recibo** (ex.: contrato 7840): regra não definida.
 - Juros entram na base da taxa ADM? Ainda não apareceu caso real.
 
