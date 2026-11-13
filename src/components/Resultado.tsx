@@ -9,18 +9,30 @@ type Visto = Caso & { aceito?: boolean };
 const ACEITO = "Aceito na conferência manual";
 
 // Textos vêm do PDF: renderizados só como texto pelo React (sem HTML).
-function CartaoCaso({ c, aoAceitar }: { c: Visto; aoAceitar: (aceito: boolean) => void }) {
+function CartaoCaso({
+  c,
+  aoAceitar,
+  aoRemoverRepasse,
+}: {
+  c: Visto;
+  aoAceitar: (aceito: boolean) => void;
+  aoRemoverRepasse: (id: string) => void;
+}) {
   const meta = [
     `venc. ${c.vencimento}`,
     c.situacao,
-    c.proprietarios.length > 0 && `Prop.: ${c.proprietarios.join(", ")}`,
-    c.onde.join(" · "),
+    c.inquilino && `Inquilino: ${c.inquilino}`,
   ].filter(Boolean);
   return (
     <li className="caso">
       <p className="caso__titulo">
         <strong>Contrato {c.contrato}</strong>
-        {c.inquilino && ` · ${c.inquilino}`}
+        {c.proprietarios.length > 0 && (
+          <>
+            {" · Proprietário: "}
+            <strong>{c.proprietarios.join(", ")}</strong>
+          </>
+        )}
         {c.aceito && (
           <>
             {" "}
@@ -29,6 +41,11 @@ function CartaoCaso({ c, aoAceitar }: { c: Visto; aoAceitar: (aceito: boolean) =
         )}
       </p>
       <p className="caso__meta">{meta.join(" · ")}</p>
+      <ul className="caso__onde" aria-label="Arquivos lidos">
+        {c.onde.map((o) => (
+          <li key={o}>{o}</li>
+        ))}
+      </ul>
       {c.apontamentos.length > 0 && (
         <ul>
           {[...c.apontamentos]
@@ -45,6 +62,11 @@ function CartaoCaso({ c, aoAceitar }: { c: Visto; aoAceitar: (aceito: boolean) =
           {c.aceito ? "Desfazer (voltar para a lista anterior)" : "Conferi manualmente: marcar como certo"}
         </button>
       )}
+      {c.repasses.map((r) => (
+        <button key={r.id} type="button" className="botao botao--texto caso__remover" onClick={() => aoRemoverRepasse(r.id)}>
+          Remover extrato de {r.proprietario} desta análise
+        </button>
+      ))}
     </li>
   );
 }
@@ -69,11 +91,14 @@ type PropsRelatorio = {
   escolhas: Record<string, Conta>;
   aoEscolher: (chave: string, conta: Conta) => void;
   aoFechar: () => void;
+  removidos: number;
+  aoRemoverRepasse: (id: string) => void;
+  aoRestaurar: () => void;
 };
 
 const NOME_CONTA = { [CONTA_ITAU]: "Itaú", [CONTA_BRADESCO]: "Bradesco" } as const;
 
-function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar }: PropsRelatorio) {
+function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, aoRemoverRepasse, aoRestaurar }: PropsRelatorio) {
   const titulo = Object.fromEntries(SECOES.map((s) => [s.status, s.titulo]));
   const lista = secoes.flatMap((s) => casos.filter((c) => c.status === s.status));
   const t = totais(lista, escolhas);
@@ -98,6 +123,33 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar }: PropsRelat
           Total a repassar: <strong>{reais(t.geral)}</strong>
         </p>
         <p className="caso__meta">Soma do valor pago/a repassar de {t.repasses} extrato(s) desta conferência.</p>
+        {removidos > 0 && (
+          <p className="alerta nao-imprimir">
+            {removidos} extrato(s) excluído(s) da soma e da análise.{" "}
+            <button type="button" className="botao botao--texto" onClick={aoRestaurar}>
+              Colocar de volta
+            </button>
+          </p>
+        )}
+        <details className="soma-lista nao-imprimir">
+          <summary>Ver os {t.repasses} repasses da soma (para excluir algum)</summary>
+          <ul>
+            {lista.flatMap((c) =>
+              c.repasses.map((r) => (
+                <li key={r.id}>
+                  <span>
+                    <strong>Contrato {c.contrato}</strong> · <strong>{r.proprietario}</strong> · {r.banco || "sem banco"} ·{" "}
+                    <strong>{reais(r.valor)}</strong>
+                    <span className="caso__meta"> · Extrato: {r.onde}</span>
+                  </span>
+                  <button type="button" className="botao botao--texto" onClick={() => aoRemoverRepasse(r.id)}>
+                    Excluir
+                  </button>
+                </li>
+              )),
+            )}
+          </ul>
+        </details>
         <table className="totais__bancos">
           <thead>
             <tr>
@@ -134,7 +186,8 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar }: PropsRelat
               {t.semBanco.map((r) => (
                 <li key={r.chave}>
                   <span>
-                    <strong className="sem-banco__contrato">Contrato {r.contrato}</strong> · {r.proprietario} · <strong>{reais(r.valor)}</strong>
+                    <strong className="sem-banco__contrato">Contrato {r.contrato}</strong> · <strong>{r.proprietario}</strong> · <strong>{reais(r.valor)}</strong>
+                    <span className="caso__meta"> · Extrato: {r.onde}</span>
                   </span>
                   <span className="sem-banco__opcoes" role="radiogroup" aria-label={`Conta do repasse do contrato ${r.contrato}`}>
                     {([CONTA_ITAU, CONTA_BRADESCO] as const).map((conta) => (
@@ -167,10 +220,15 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar }: PropsRelat
             — <span className={`selo selo--${c.status === "divergencia" ? "divergencia" : c.status === "manual" ? "manual" : "aviso"}`}>{c.aceito ? ACEITO : titulo[c.status]}</span>
           </p>
           <p className="caso__meta">
-            {[`venc. ${c.vencimento}`, c.competencia && `competência ${c.competencia}`, c.situacao, c.inquilino && `Inquilino: ${c.inquilino}`, c.onde.join(" · ")]
+            {[`venc. ${c.vencimento}`, c.competencia && `competência ${c.competencia}`, c.situacao, c.inquilino && `Inquilino: ${c.inquilino}`]
               .filter(Boolean)
               .join(" · ")}
           </p>
+          <ul className="caso__onde" aria-label="Arquivos lidos">
+            {c.onde.map((o) => (
+              <li key={o}>{o}</li>
+            ))}
+          </ul>
           <ul>
             {[...c.apontamentos]
               .sort((a, b) => PESO[a.tipo] - PESO[b.tipo])
@@ -192,7 +250,15 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar }: PropsRelat
   );
 }
 
-export function Resultado({ casos: originais, modo }: { casos: Caso[]; modo: Modo }) {
+type PropsResultado = {
+  casos: Caso[];
+  modo: Modo;
+  removidos: number;
+  aoRemoverRepasse: (id: string) => void;
+  aoRestaurar: () => void;
+};
+
+export function Resultado({ casos: originais, modo, removidos, aoRemoverRepasse, aoRestaurar }: PropsResultado) {
   const [relatorio, setRelatorio] = useState(false);
   // Some ao começar outra conferência: nada é guardado.
   const [aceitos, setAceitos] = useState<Set<string>>(new Set());
@@ -218,6 +284,9 @@ export function Resultado({ casos: originais, modo }: { casos: Caso[]; modo: Mod
         escolhas={escolhas}
         aoEscolher={(chave, conta) => setEscolhas((e) => ({ ...e, [chave]: conta }))}
         aoFechar={() => setRelatorio(false)}
+        removidos={removidos}
+        aoRemoverRepasse={aoRemoverRepasse}
+        aoRestaurar={aoRestaurar}
       />
     );
 
@@ -226,6 +295,14 @@ export function Resultado({ casos: originais, modo }: { casos: Caso[]; modo: Mod
       <button type="button" className="botao botao--secundario botao--relatorio" onClick={() => setRelatorio(true)}>
         Ver relatório do que foi conferido
       </button>
+      {removidos > 0 && (
+        <p className="alerta">
+          {removidos} extrato(s) removido(s) desta análise.{" "}
+          <button type="button" className="botao botao--texto" onClick={aoRestaurar}>
+            Colocar de volta
+          </button>
+        </p>
+      )}
       <ul className="placar" role="status">
         {secoes.map((s) => (
           <li key={s.status} className={`placar__item placar__item--${s.status}`}>
@@ -248,7 +325,7 @@ export function Resultado({ casos: originais, modo }: { casos: Caso[]; modo: Mod
               {s.nota && <p className="nota">{s.nota}</p>}
               <ul className="casos">
                 {lista.map((c) => (
-                  <CartaoCaso key={id(c)} c={c} aoAceitar={(sim) => aceitar(c, sim)} />
+                  <CartaoCaso key={id(c)} c={c} aoAceitar={(sim) => aceitar(c, sim)} aoRemoverRepasse={aoRemoverRepasse} />
                 ))}
               </ul>
             </details>

@@ -6,6 +6,8 @@ export type LinhaRecibo = { vencimento: string; historico: string; debito: numbe
 export type Recibo = {
   arquivo: string;
   pagina: number;
+  /** Em PDF juntado pelo app: arquivo e página originais ("extrato-8.pdf, pág. 2"). */
+  origem?: string;
   contrato: string;
   locatario: string;
   locador: string;
@@ -26,6 +28,8 @@ export type LinhaRepasse = {
 export type Repasse = {
   arquivo: string;
   pagina: number;
+  /** Em PDF juntado pelo app: arquivo e página originais ("extrato-8.pdf, pág. 2"). */
+  origem?: string;
   proprietario: string;
   /** Banco do repasse ao proprietário ("" quando o extrato não informa). */
   banco: string;

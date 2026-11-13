@@ -1,28 +1,30 @@
 # Conferência Financeira — Special Imóveis
 
 Ferramenta interna para conferir os **Recibos do Locatário** contra os **Extratos de Repasse** exportados do NIDO.
-Os PDFs são lidos e conferidos **no navegador**: nada é enviado nem armazenado.
+Os PDFs são lidos e conferidos **no navegador**, com regras fixas e sem IA: nada é enviado nem armazenado.
 
 **Endereço:** <https://financeirospl.specialimoveis.workers.dev> (acesso só com nome e senha cadastrados)
 
-> **Status:** em teste. Regras de conferência em [docs/REGRAS-CONFERENCIA.md](docs/REGRAS-CONFERENCIA.md).
-> Falta validar com um par de recibos e extratos do mesmo lote.
+> **Status:** em teste com lotes reais. Regras em [docs/REGRAS-CONFERENCIA.md](docs/REGRAS-CONFERENCIA.md);
+> perguntas em aberto com o financeiro em [CLAUDE.md](CLAUDE.md#pendências-aguardando-o-negócio).
 
-## Como funciona
+## Como usar
 
-1. A pessoa entra com **nome + senha** (senha gerada pelo administrador).
-2. Adiciona os PDFs de **Recibo do Locatário** e de **Extrato de Repasse**, exportados direto do NIDO
-   (não use “Imprimir”: esse PDF não tem texto). Pode ser mais de um arquivo de cada lado.
-3. O navegador lê os relatórios e aplica as regras. Nenhum dado sai do computador.
-4. O resultado mostra as **divergências**, os casos para **conferência manual** e os contratos sem divergência,
-   com o arquivo e a página de cada um.
-5. “Nova conferência”, “Sair” ou fechar a página apagam tudo. Não há histórico.
+1. Entre com **nome + senha** (senha gerada pelo administrador).
+2. Escolha o modo:
+   - **Conferência geral:** todos os recibos × todos os extratos de uma vez.
+   - **Extratos separados:** os recibos ficam carregados e você confere um ou vários extratos por vez.
+3. Adicione os PDFs exportados **direto do NIDO**. Pode ser mais de um arquivo de cada lado.
+   PDF feito por “Imprimir” não tem texto e é recusado.
+4. Veja o resultado, com arquivo e página de cada contrato:
+   - **Com divergência** e **Conferir manualmente**: marque “Conferi manualmente” quando estiver certo.
+   - **Recibo sem extrato** e **Extrato sem recibo**: normalmente é arquivo que não foi enviado.
+   - **Sem divergência**.
+5. **Relatório:** tudo o que foi conferido e o total a repassar por banco (Itaú/Bradesco).
+   Use “Imprimir / salvar em PDF” para guardar uma cópia.
+6. “Nova conferência”, “Sair” ou fechar a página apagam tudo. Não há histórico.
 
 ## Gerenciar acessos
-
-```bash
-npm run usuarios -- ajuda
-```
 
 | Situação | Comando |
 |---|---|
@@ -36,13 +38,9 @@ npm run usuarios -- ajuda
 - `usuarios.local.json` guarda só nomes e hashes (nunca senhas) e fica fora do Git. Faça uma cópia de segurança.
 - Cabem cerca de 50 usuários. A sessão dura 8 horas.
 
-## Requisitos
+## Desenvolvimento
 
-- Node.js 22+ (testado com 24)
-- Conta Cloudflare (Workers; plano gratuito serve para testes)
-- Para a análise: projeto na OpenAI com chave dedicada e limite de gasto
-
-## Desenvolvimento local
+Requisitos: Node.js 22+ (testado com 24) e conta Cloudflare (Workers, plano gratuito serve).
 
 ```bash
 npm install
@@ -56,34 +54,30 @@ cp .env.example .dev.vars
 npm run dev
 ```
 
-Em `localhost`, com `AMBIENTE=desenvolvimento` e `DEV_EMAIL` preenchido, o login é simulado.
-Para testar o login real localmente, veja [docs/DEPLOY-TESTE.md](docs/DEPLOY-TESTE.md#testar-o-login-localmente).
-Use apenas documentos **fictícios ou anonimizados**.
-
-## Comandos
+Em `localhost`, com `AMBIENTE=desenvolvimento` e `DEV_EMAIL` preenchido, o login é pulado.
+Para testar o login real, veja [docs/DEPLOY-TESTE.md](docs/DEPLOY-TESTE.md#testar-o-login-localmente).
+Use só documentos **fictícios ou anonimizados**: nunca versione PDFs reais (têm CPF, nomes e contas).
 
 | Comando | O que faz |
 |---|---|
 | `npm run dev` | App + Worker rodando localmente |
 | `npm test` | Testes automáticos (Vitest) |
 | `npm run typecheck` | Checagem de tipos |
-| `npm run build` | Build de produção |
 | `npm run deploy` | Typecheck + testes + build + publicação na Cloudflare |
-| `npm run usuarios -- ajuda` | Gerenciamento de acessos |
 | `npm run cf-typegen` | Regenera os tipos do Worker após mudar o `wrangler.jsonc` |
 
 ## Publicação
 
 Passo a passo em [docs/DEPLOY-TESTE.md](docs/DEPLOY-TESTE.md) e checklist em
-[SECURITY.md](SECURITY.md#checklist-de-implantação). Secrets usados na Cloudflare:
-`SESSION_SECRET`, `USUARIOS` e (para a análise) `OPENAI_API_KEY`. Nenhum segredo vai para o Git.
+[SECURITY.md](SECURITY.md#checklist-de-implantação). Secrets na Cloudflare: `SESSION_SECRET` e `USUARIOS`.
+A rota de IA (`OPENAI_API_KEY`) continua no Worker, mas o app não a usa hoje. Nenhum segredo vai para o Git.
 
 ## Identidade visual
 
-Somente três cores: `#EFEBE0` (fundo), `#F3EEE6` (cartões e campos) e `#8A1C17` (texto, botões e bordas).
-Estados e erros são diferenciados por peso, bordas e sublinhado, não por cores extras.
-O logo é uma imagem e mantém suas cores originais.
+Só três cores: `#EFEBE0` (fundo), `#F3EEE6` (cartões e campos) e `#8A1C17` (texto, botões e bordas).
+Estados e erros se distinguem por peso, bordas e sublinhado, não por cores extras. O logo mantém as cores originais.
 
 ## Documentação
 
-[ARCHITECTURE.md](ARCHITECTURE.md) · [SECURITY.md](SECURITY.md) · [PRIVACY.md](PRIVACY.md) · [CLAUDE.md](CLAUDE.md)
+[Regras da conferência](docs/REGRAS-CONFERENCIA.md) · [ARCHITECTURE.md](ARCHITECTURE.md) ·
+[SECURITY.md](SECURITY.md) · [PRIVACY.md](PRIVACY.md) · [CLAUDE.md](CLAUDE.md)

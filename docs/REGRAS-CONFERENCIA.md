@@ -38,11 +38,13 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
 
 - Tudo o que o inquilino pagou e pertence ao proprietário tem que aparecer no extrato, com o mesmo valor.
 - **Taxa ADM** = (aluguel − abono + multa) × percentual do extrato, arredondada. Ausente ou diferente: divergência.
+  **Aluguel Gerador** e **manutenção** (ex.: "Manutenção Elevador") **não entram** na base. **Abono de benfeitoria**
+  (ex.: "Abono/ Benfeitoria 4/4") **não diminui** a base: a taxa vai sobre o aluguel cheio.
 - **Taxa de intermediação** (primeiro aluguel): deve ser 100% do aluguel; se for diferente, conferência manual.
   Nesse caso a **multa não é repassada**.
 - **Abono e IRRF**: crédito ao inquilino no recibo, débito ao proprietário no extrato.
 - **Multa e juros**: repassados ao proprietário (exceto com taxa de intermediação).
-- **Ficam retidos** (não podem aparecer como crédito ao proprietário): taxa de expediente, serviço de despachante,
+- **Ficam retidos** (não podem aparecer como crédito ao proprietário): taxa de expediente, serviço (de) despachante (ex.: "Serviço Despachante Enel/Sabesp"),
   taxa de assinatura digital, taxa de boleto, matrícula atualizada, boleto de caucionamento e seguros.
   Seguro repassado vai para conferência manual (há casos em que é repassado).
 - **Descontos previstos ao proprietário**: taxa de repasse, taxa de renovação e vistoria.
