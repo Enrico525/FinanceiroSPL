@@ -69,9 +69,34 @@ describe("taxa ADM", () => {
     expect(taxaAdmEsperada(repasse([["Aluguel", 1375390, true]]).linhas, 500000)).toBe(687695); // 50% → exato
     expect(taxaAdmEsperada(repasse([["Aluguel", 13753, true]]).linhas, 50000)).toBe(688); // 687,65 → 688
   });
+
+  it("não inclui Aluguel Gerador nem manutenção na base", () => {
+    const linhas = repasse([
+      ["Aluguel 11/12 - Ref. 16/10/2026 a 15/11/2026", 250000, true],
+      ["Aluguel Gerador", 2016, true],
+      ["Manutenção Elevador 2/4", 750000, false],
+    ]).linhas;
+    expect(taxaAdmEsperada(linhas, 60000)).toBe(15000); // 2.500,00 × 6%, como o NIDO
+  });
+
+  it("abono de benfeitoria não diminui a base", () => {
+    const linhas = repasse([
+      ["Aluguel 05/12 - Ref. 12/10/2026 a 11/11/2026", 300000, true],
+      ["Abono/ Benfeitoria 4/4", 300000, false],
+    ]).linhas;
+    expect(taxaAdmEsperada(linhas, 50000)).toBe(15000); // 3.000,00 × 5%, como o NIDO
+  });
 });
 
 describe("conferência recibo × repasse", () => {
+  it("diz em qual arquivo e página está cada lado, e de onde veio no PDF juntado", () => {
+    const [c] = conferir([RECIBO_NORMAL], [{ ...REPASSE_NORMAL, arquivo: "juntado.pdf", pagina: 3, origem: "extrato-8.pdf, pág. 1" }]);
+    expect(c.onde).toEqual([
+      "Recibo: recibos.pdf, pág. 1",
+      "Extrato: juntado.pdf, pág. 3 (no juntado, veio de extrato-8.pdf, pág. 1)",
+    ]);
+  });
+
   it("situação Normal correta: sem apontamentos", () => {
     expect(textos([RECIBO_NORMAL], [REPASSE_NORMAL])).toEqual([]);
     expect(status([RECIBO_NORMAL], [REPASSE_NORMAL])).toEqual(["ok"]);
@@ -288,6 +313,7 @@ describe("conferência recibo × repasse", () => {
   it("taxas pagas pelo inquilino ficam retidas", () => {
     const r = linhasRecibo([
       ["Serviço de Despachante", 5000, 0],
+      ["Serviço Despachante Enel/Sabesp", 15000, 0], // caso real, contrato 15259
       ["Taxa Assinatura Digital", 3000, 0],
       ["Taxa Boleto", 350, 0],
       ["Matrícula Atualizada", 6000, 0],

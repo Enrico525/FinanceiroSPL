@@ -32,6 +32,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Hospedagem (11/2026): segue no `*.workers.dev` da Cloudflare, sem domínio próprio (uso temporário).
 - PDF gerado por "Imprimir → Microsoft Print to PDF" não tem texto (letras viram desenho): o app recusa e pede o
   relatório exportado direto do NIDO. OCR não é necessário.
+- Juntar PDF (11/2026): página que junta vários Extratos de Repasse num PDF só (`src/pdf/juntar.ts`, pdf-lib,
+  copiando as páginas originais) e só **baixa** o arquivo para o computador; o app lê esse PDF como qualquer outro.
+  Lateral com 3 páginas: Juntar PDF, Repasses únicos (modo "um") e Repasses juntados (modo "geral").
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
 
 ## Pendências (aguardando o negócio)
@@ -42,6 +45,10 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Taxa de intermediação de 50% do aluguel (contrato 15215): válida ou a regra de 100% muda? Hoje vira conferência manual.
 - "Taxa Adm" aparecendo no **recibo** (ex.: contrato 7840): regra não definida.
 - Juros entram na base da taxa ADM? Ainda não apareceu caso real.
+
+- Gerar a remessa de pagamento do Itaú (SISPAG CNAB 240) com os repasses que bateram 100% e estão "AGUARDANDO
+  EFETIVAÇÃO": pausado a pedido do negócio. Faltam: tabela nome do banco → código, origem do "seu número", formas de
+  pagamento além de transferência, onde guardar os dados da conta da Special (Secret no Worker) e validar com o Itaú.
 
 ## Estrutura
 

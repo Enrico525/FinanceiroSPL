@@ -11,8 +11,8 @@ export type Caso = {
   inquilino: string;
   proprietarios: string[];
   /** Um por extrato (proprietário): banco do repasse ("" = não informado) e valor pago/a repassar, em centavos. */
-  repasses: { proprietario: string; banco: string; valor: number }[];
-  /** Onde achar no PDF: "arquivo.pdf, pág. 3". */
+  repasses: { id: string; proprietario: string; banco: string; valor: number; onde: string }[];
+  /** Onde achar no PDF: "Extrato: arquivo.pdf, pág. 3". */
   onde: string[];
   /** sem_extrato / sem_recibo: o outro lado não está nos arquivos enviados. */
   status: "ok" | "divergencia" | "manual" | "sem_extrato" | "sem_recibo";
@@ -41,7 +41,7 @@ const ehDiferenca = (h: string) => /diferen[cç]a/i.test(h);
 // Pagos pelo inquilino e retidos pela imobiliária: nunca vão ao proprietário.
 const ehRetidoNoRecibo = (h: string) =>
   ehSeguro(h) ||
-  /^(taxa de expediente|servi[cç]o de despachante|despachante|taxa (de )?assinatura digital|taxa (de )?boleto|boleto de cau?[cç]ionamento|matr[ií]cula atualizada)/i.test(
+  /^(taxa de expediente|servi[cç]o (de )?despachante|despachante|taxa (de )?assinatura digital|taxa (de )?boleto|boleto de cau?[cç]ionamento|matr[ií]cula atualizada)/i.test(
     h,
   );
 // Descontos ao proprietário previstos no extrato, sem origem no recibo.
@@ -53,10 +53,14 @@ const participacao = (p: string) => {
   return Number(i) * 100 + Number(d.padEnd(2, "0").slice(0, 2));
 };
 
-/** (aluguel − abono + multa) × taxa, arredondado meio-para-cima. Conferido em 106 de 106 extratos reais. */
+/** (aluguel − abono + multa) × taxa (exceções na base abaixo), arredondado meio-para-cima. Conferido em 106 de 106 extratos reais. */
 export function taxaAdmEsperada(linhas: LinhaRepasse[], taxa: number): number {
   const soma = (f: (h: string) => boolean) => linhas.filter((l) => f(l.historico)).reduce((n, l) => n + l.bruto, 0);
-  const base = soma(ehAluguel) - soma(ehAbono) + soma(ehMulta);
+  // Definido pelo financeiro: "Aluguel Gerador" e manutenção não entram; abono de benfeitoria não reduz a base.
+  const base =
+    soma((h) => ehAluguel(h) && !/^aluguel gerador/i.test(h)) -
+    soma((h) => ehAbono(h) && !/benfeitoria/i.test(h)) +
+    soma(ehMulta);
   return Math.floor((base * taxa + 500_000) / 1_000_000);
 }
 
@@ -235,12 +239,12 @@ export const chaveRepasse = (contrato: string, proprietario: string) => `${contr
  */
 export function totais(casos: Caso[], escolhas: Record<string, Conta> = {}) {
   const porConta = new Map<string, { valor: number; repasses: number; bancos: string[] }>();
-  const semBanco: { chave: string; contrato: string; proprietario: string; valor: number; conta: Conta | null }[] = [];
+  const semBanco: { chave: string; contrato: string; proprietario: string; valor: number; onde: string; conta: Conta | null }[] = [];
   for (const c of casos)
     for (const r of c.repasses) {
       const chave = chaveRepasse(c.contrato, r.proprietario);
       const escolhida = r.banco ? null : (escolhas[chave] ?? null);
-      if (!r.banco) semBanco.push({ chave, contrato: c.contrato, proprietario: r.proprietario, valor: r.valor, conta: escolhida });
+      if (!r.banco) semBanco.push({ chave, contrato: c.contrato, proprietario: r.proprietario, valor: r.valor, onde: r.onde, conta: escolhida });
       const conta = escolhida ?? contaDeSaida(r.banco);
       const nome = r.banco || "sem banco (escolhido)";
       const t = porConta.get(conta) ?? { valor: 0, repasses: 0, bancos: [] };
@@ -254,12 +258,19 @@ export function totais(casos: Caso[], escolhas: Record<string, Conta> = {}) {
   return { geral: bancos.reduce((n, b) => n + b.valor, 0), repasses: bancos.reduce((n, b) => n + b.repasses, 0), bancos, semBanco };
 }
 
+/** Identifica um extrato de repasse: o mesmo número e proprietário é o mesmo extrato (cópia ou versão corrigida). */
+export const idRepasse = (r: Repasse) => `${r.numero}|${r.proprietario}`;
+
+/** "arquivo.pdf, pág. 3", e no PDF juntado também o arquivo original. */
+const local = (r: Recibo | Repasse) =>
+  `${r.arquivo}, pág. ${r.pagina}${r.origem ? ` (no juntado, veio de ${r.origem})` : ""}`;
+
 export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso[] {
   // O mesmo recibo/extrato pode vir em dois arquivos enviados: cópia idêntica não é duplicidade.
   const unicosPor = <T>(itens: T[], id: (x: T) => string) =>
     itens.filter((x, i) => itens.findIndex((y) => id(y) === id(x)) === i);
-  const recibos = unicosPor(todosRecibos, (r) => JSON.stringify({ ...r, arquivo: "", pagina: 0 }));
-  const repasses = unicosPor(todosRepasses, (r) => `${r.numero}|${r.proprietario}`);
+  const recibos = unicosPor(todosRecibos, (r) => JSON.stringify({ ...r, arquivo: "", pagina: 0, origem: "" }));
+  const repasses = unicosPor(todosRepasses, idRepasse);
   const chave = (contrato: string, vencimento: string) => `${contrato}|${vencimento}`;
   const grupos = new Map<string, { recibos: Recibo[]; repasses: Repasse[] }>();
   const grupo = (k: string) => grupos.get(k) ?? grupos.set(k, { recibos: [], repasses: [] }).get(k)!;
@@ -315,8 +326,13 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
       inquilino: recibo?.locatario || r0?.inquilino || "",
       // Sem extrato, o proprietário vem do "LOCADOR" do recibo.
       proprietarios: unicos.length ? unicos.map((r) => r.proprietario) : recibo?.locador ? [recibo.locador] : [],
-      repasses: unicos.map((r) => ({ proprietario: r.proprietario, banco: r.banco, valor: r.pago })),
-      onde: [...g.recibos, ...g.repasses].map((r) => `${r.arquivo}, pág. ${r.pagina}`).filter((x, i, a) => a.indexOf(x) === i),
+      repasses: unicos.map((r) => ({ id: idRepasse(r), proprietario: r.proprietario, banco: r.banco, valor: r.pago, onde: local(r) })),
+      onde: [
+        ...g.recibos.map((r) => ["Recibo", r] as const),
+        ...g.repasses.map((r) => ["Extrato", r] as const),
+      ]
+        .map(([tipo, r]) => `${tipo}: ${local(r)}`)
+        .filter((x, i, a) => a.indexOf(x) === i),
       status: ap.some((a) => a.tipo === "divergencia")
         ? "divergencia"
         : ap.some((a) => a.tipo === "manual")
