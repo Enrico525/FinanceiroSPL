@@ -131,6 +131,10 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
     setValorManual("");
   };
   const faltam = t.semBanco.filter((r) => !r.conta).length;
+  const pagamentos = lista
+    .flatMap((c) => c.repasses.map((r) => ({ c, r, conta: r.banco ? contaDeSaida(r.banco) : (escolhas[chaveRepasse(c.contrato, r.proprietario)] ?? "") })))
+    .filter(({ r }) => r.valor - r.caucao !== 0) // extrato só de caução não é pago; aparece no total à parte
+    .sort((a, b) => Number(a.c.contrato) - Number(b.c.contrato));
   // Pesquisa da lista de excluir: só os dígitos contam, então "1.234,56" e "123456" acham o mesmo valor.
   const [buscaContrato, setBuscaContrato] = useState("");
   const [buscaValor, setBuscaValor] = useState("");
@@ -176,11 +180,8 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
           </button>
         ))}
       </div>
-      <h2>Relatório de conferência{filtro && ` — ${NOME_CONTA[filtro]}`}</h2>
-      <p className="caso__meta">
-        Gerado em {new Date().toLocaleString("pt-BR")} · {lista.length} contratos ·{" "}
-        {secoes.map((s) => `${lista.filter((c) => c.status === s.status).length} ${s.titulo.toLowerCase()}`).join(" · ")}
-      </p>
+      <h2>Relatório de repasses{filtro && ` — ${NOME_CONTA[filtro]}`}</h2>
+      <p className="caso__meta">Gerado em {new Date().toLocaleString("pt-BR")}</p>
       <section className="totais" aria-label="Totais a repassar">
         <p className="totais__geral">
           Total a repassar: <strong>{reais(t.geral)}</strong>
@@ -329,81 +330,68 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
           </div>
         )}
       </section>
-      {lista.map((c) => (
-        <article key={c.contrato + c.vencimento} className="relatorio__caso">
-          <p className="caso__titulo">
-            <strong className="relatorio__contrato">
-              Contrato {c.contrato} · Banco:{" "}
-              {[...new Set(c.repasses.map((r) => r.banco))].filter(Boolean).join(", ") ||
-                (c.repasses.length ? <span className="selo selo--divergencia">SEM BANCO</span> : "sem extrato")}
-            </strong>
-            {c.proprietarios.length > 0 && (
-              <>
-                {" · Proprietário: "}
-                <strong className="relatorio__proprietario">{c.proprietarios.join(", ")}</strong>
-              </>
-            )}{" "}
-            — <span className={`selo selo--${c.status === "divergencia" ? "divergencia" : c.status === "manual" ? "manual" : "aviso"}`}>{c.aceito ? ACEITO : titulo[c.status]}</span>
-          </p>
-          <p className="caso__meta">
-            {[`venc. ${c.vencimento}`, c.competencia && `competência ${c.competencia}`, c.situacao, c.inquilino && `Inquilino: ${c.inquilino}`]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-          <ul className="caso__onde" aria-label="Arquivos lidos">
-            {c.onde.map((o) => (
-              <li key={o}>{o}</li>
-            ))}
-          </ul>
-          {c.repasses.length > 0 && (
-            <ul className="relatorio__banco" aria-label="Dados bancários">
-              {c.repasses.map((r) => (
-                <li key={r.id}>
-                  <strong>{r.proprietario}</strong>
-                  {r.pagamento.documento && ` (${r.pagamento.documento})`} —{" "}
-                  {r.banco
-                    ? [
-                        r.pagamento.forma,
-                        r.banco,
-                        r.pagamento.agencia && `Ag. ${r.pagamento.agencia}`,
-                        r.pagamento.conta && `Conta ${r.pagamento.conta}`,
-                        r.pagamento.tipoConta,
-                        r.pagamento.descricao && `Obs.: ${r.pagamento.descricao}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")
-                    : "sem dados bancários no extrato"}{" "}
-                  · <strong>{reais(r.valor)}</strong>
-                  {r.caucao > 0 && ` · depósito caução de ${reais(r.caucao)}: não entra no total`}
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="relatorio__remover nao-imprimir">
-            {c.repasses.map((r) => (
-              // Sem banco (em vermelho): botão cheio; os demais, contornado.
-              <button key={r.id} type="button" className={`botao botao--pequeno ${r.banco ? "botao--secundario" : ""}`} onClick={() => aoRemoverRepasse(r.id)}>
-                Remover extrato de {r.proprietario}
-              </button>
-            ))}
-          </p>
-          <ul>
-            {[...c.apontamentos]
-              .sort((a, b) => PESO[a.tipo] - PESO[b.tipo])
-              .map((a, i) => (
-                <li key={`a${i}`}>
-                  <span className={`selo selo--${a.tipo}`}>{ROTULO[a.tipo]}</span> {a.texto}
-                </li>
-              ))}
-            {c.conferidos.map((t, i) => (
-              <li key={`c${i}`} className="conferido">
-                <span aria-hidden="true">✓</span> {t}
-              </li>
-            ))}
-            {c.apontamentos.length + c.conferidos.length === 0 && <li>Nada a conferir: falta o outro documento.</li>}
-          </ul>
-        </article>
-      ))}
+      {/* Pagamentos: um quadro por conta de saída, só com o necessário para pagar (a conferência fica na tela de resultado). */}
+      {([CONTA_ITAU, CONTA_BRADESCO, ""] as const).map((conta) => {
+        const linhas = pagamentos.filter((p) => p.conta === conta);
+        if (!linhas.length) return null;
+        return (
+          <section key={conta || "sem"} className="pagamentos">
+            <h3>
+              {conta ? `Sai do ${NOME_CONTA[conta]}` : "Sem banco no extrato: escolha a conta acima"} · {linhas.length} repasse(s) ·{" "}
+              {reais(linhas.reduce((n, { r }) => n + r.valor - r.caucao, 0))}
+            </h3>
+            <table className="pagamentos__tabela">
+              <thead>
+                <tr>
+                  <th scope="col">Contrato</th>
+                  <th scope="col">Proprietário</th>
+                  <th scope="col">Dados bancários</th>
+                  <th scope="col">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {linhas.map(({ c, r }) => (
+                  <tr key={r.id}>
+                    <td>
+                      <strong className="pagamentos__destaque">{c.contrato}</strong>
+                      <span className="caso__meta">{c.competencia && `comp. ${c.competencia}`}</span>
+                      {c.status !== "ok" && !c.aceito && <span className={`selo selo--${c.status === "divergencia" ? "divergencia" : "manual"}`}>{titulo[c.status]}</span>}
+                    </td>
+                    <td>
+                      <strong className="pagamentos__destaque">{r.proprietario}</strong>
+                      {r.pagamento.documento && <span className="caso__meta">{r.pagamento.documento}</span>}
+                    </td>
+                    <td>
+                      {r.banco ? (
+                        <>
+                          <strong className="pagamentos__destaque">{r.banco}</strong>
+                          <strong className="pagamentos__conta">
+                            {[r.pagamento.agencia && `Ag. ${r.pagamento.agencia}`, r.pagamento.conta && `Conta ${r.pagamento.conta}`, r.pagamento.tipoConta]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </strong>
+                          {(r.pagamento.forma || r.pagamento.descricao) && (
+                            <span className="caso__meta">{[r.pagamento.forma, r.pagamento.descricao].filter(Boolean).join(" · ")}</span>
+                          )}
+                        </>
+                      ) : (
+                        "sem dados bancários no extrato"
+                      )}
+                    </td>
+                    <td className="pagamentos__valor">
+                      <strong>{reais(r.valor - r.caucao)}</strong>
+                      {r.caucao > 0 && <span className="caso__meta">+ caução {reais(r.caucao)} (fora do total)</span>}
+                      <button type="button" className="botao botao--texto nao-imprimir" onClick={() => aoRemoverRepasse(r.id)}>
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -454,7 +442,7 @@ export function Resultado({ casos: originais, modo, removidos, aoRemoverRepasse,
   return (
     <div className="resultado">
       <button type="button" className="botao botao--secundario botao--relatorio" onClick={() => setRelatorio(true)}>
-        Ver relatório do que foi conferido
+        Ver relatório de repasses
       </button>
       {removidos > 0 && (
         <p className="alerta">

@@ -39,6 +39,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   conta (Itaú/Bradesco); só somam nos totais, sem conferência, e ficam só em memória.
 - Dados bancários no relatório (11/2026): CPF/CNPJ, forma, banco, agência, conta, tipo e descrição do cabeçalho do
   extrato aparecem em cada contrato do relatório (tela e impressão), só como texto e só em memória.
+- Relatório de repasses (11/2026): é para pagar, não para conferir. Uma tabela por conta de saída (Itaú, Bradesco,
+  sem banco) com contrato, proprietário + CPF/CNPJ, dados bancários e valor, em destaque; sem a lista de
+  apontamentos e conferidos (ficam na tela de resultado). Recibo sem extrato e extrato só de caução ficam fora.
 - Extrato excluído pela pessoa (11/2026): o contrato sai do resultado e do relatório, em vez de virar "recibo sem
   extrato" (`conferirSem`).
 - Taxa de intermediação (11/2026): o normal é 100% do aluguel, mas varia conforme o acordo (fora do PDF); diferente
