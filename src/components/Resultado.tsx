@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { CONTA_BRADESCO, CONTA_ITAU, chaveRepasse, contaDeSaida, reais, totais, type Caso, type Conta, type Manual } from "../nido/conferir";
 import { valorDigitado } from "../nido/ler";
 import type { Modo } from "../App";
@@ -143,6 +144,20 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
         <button type="button" className="botao" onClick={() => window.print()}>
           Imprimir / salvar em PDF
         </button>
+        {([CONTA_ITAU, CONTA_BRADESCO] as const).map((conta) => (
+          <button
+            key={conta}
+            type="button"
+            className="botao"
+            onClick={() => {
+              // A tela precisa já estar só com a conta antes de o navegador abrir a impressão.
+              flushSync(() => setFiltro(conta));
+              window.print();
+            }}
+          >
+            Salvar só do {NOME_CONTA[conta]}
+          </button>
+        ))}
         <button type="button" className="botao botao--secundario" onClick={aoFechar}>
           Voltar ao resultado
         </button>
