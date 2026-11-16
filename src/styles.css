@@ -142,6 +142,7 @@ input:focus-visible + .botao, label.botao:focus-within { outline: 3px solid var(
 .caso__meta { font-size: 0.8rem; opacity: 0.8; word-break: break-word; }
 .soma-lista { margin-top: 0.75rem; }
 .soma-lista summary { cursor: pointer; font-weight: 600; }
+.soma-lista__busca { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.75rem; margin-top: 0.5rem; }
 .soma-lista ul { max-height: 20rem; overflow-y: auto; margin-top: 0.5rem; }
 .soma-lista li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 1rem; padding: 0.2rem 0; border-top: 1px solid var(--linha); }
 .adicionar { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem; }
@@ -152,6 +153,13 @@ input:focus-visible + .botao, label.botao:focus-within { outline: 3px solid var(
 .caso ul { padding-left: 0; list-style: none; }
 .nota { margin: 0.5rem 0 0; font-size: 0.9rem; }
 .botao--relatorio { align-self: flex-start; }
+.botao--pequeno { padding: 0.2rem 0.7rem; font-size: 0.85rem; }
+.relatorio__remover { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.relatorio__remover:empty { display: none; }
+.filtro { gap: 0.5rem; margin: 0.75rem 0; }
+.manuais__form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem 1rem; margin-bottom: 0.5rem; }
+.manuais__form .campo { width: 12rem; }
+.relatorio ul.relatorio__banco { margin: 0.25rem 0 0.5rem; padding: 0.4rem 0.6rem; border-left: 4px solid var(--vinho); background: var(--bege); word-break: break-word; }
 
 .relatorio { background: var(--creme); border: 1px solid var(--linha); border-radius: var(--raio); padding: 1.25rem; }
 .relatorio h2 { margin: 0 0 0.25rem; }

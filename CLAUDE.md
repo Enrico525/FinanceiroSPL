@@ -35,6 +35,12 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Juntar PDF (11/2026): página que junta vários Extratos de Repasse num PDF só (`src/pdf/juntar.ts`, pdf-lib,
   copiando as páginas originais) e só **baixa** o arquivo para o computador; o app lê esse PDF como qualquer outro.
   Lateral com 3 páginas: Juntar PDF, Repasses únicos (modo "um") e Repasses juntados (modo "geral").
+- Lançamentos manuais (11/2026): repasses feitos por fora do NIDO (sem extrato) são digitados no relatório, com a
+  conta (Itaú/Bradesco); só somam nos totais, sem conferência, e ficam só em memória.
+- Dados bancários no relatório (11/2026): CPF/CNPJ, forma, banco, agência, conta, tipo e descrição do cabeçalho do
+  extrato aparecem em cada contrato do relatório (tela e impressão), só como texto e só em memória.
+- Extrato excluído pela pessoa (11/2026): o contrato sai do resultado e do relatório, em vez de virar "recibo sem
+  extrato" (`conferirSem`).
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
 
 ## Pendências (aguardando o negócio)

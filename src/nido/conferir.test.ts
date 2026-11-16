@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conferir, taxaAdmEsperada, totais } from "./conferir";
+import { conferir, conferirSem, idRepasse, taxaAdmEsperada, totais } from "./conferir";
 import type { LinhaRepasse, Recibo, Repasse } from "./ler";
 
 const V = "05/11/2026";
@@ -27,6 +27,7 @@ const repasse = (linhas: [string, number, boolean, number?][], extra: Partial<Re
     pagina: 1,
     proprietario: "DONO",
     banco: "",
+    pagamento: { documento: "", forma: "", agencia: "", conta: "", tipoConta: "", descricao: "" },
     contrato: "100",
     endereco: "R Exemplo Nº 1",
     situacao: "Normal",
@@ -102,6 +103,19 @@ describe("conferência recibo × repasse", () => {
     expect(status([RECIBO_NORMAL], [REPASSE_NORMAL])).toEqual(["ok"]);
   });
 
+  it("extrato excluído: o contrato some, sem virar recibo sem extrato", () => {
+    const a = repasse([["Aluguel", 100000, true]], { contrato: "100", numero: "1" });
+    const b = repasse([["Aluguel", 100000, true]], { contrato: "200", numero: "2" });
+    const recibos = [recibo([["Aluguel", 100000, 0]]), recibo([["Aluguel", 100000, 0]], { contrato: "200" }), recibo([["Aluguel", 100000, 0]], { contrato: "300" })];
+    const casos = conferirSem(recibos, [a, b], new Set([idRepasse(a)]));
+    // 100 foi excluído; 200 continua; 300 nunca teve extrato e segue como "recibo sem extrato".
+    expect(casos.map((c) => [c.contrato, c.status === "sem_extrato"])).toEqual([
+      ["200", false],
+      ["300", true],
+    ]);
+    expect(conferirSem(recibos, [a, b], new Set()).map((c) => c.contrato)).toEqual(["100", "200", "300"]);
+  });
+
   it("soma os repasses: Bradesco separado, todos os outros bancos no Itaú", () => {
     const r = (n: string, valor: number, banco: string) => repasse([["Aluguel", valor, true]], { contrato: n, numero: n, banco });
     const casos = conferir([], [
@@ -131,6 +145,19 @@ describe("conferência recibo × repasse", () => {
       ],
       semBanco: [{ chave: "6|DONO", conta: "BRADESCO" }],
     });
+    // Lançamentos manuais (repasses por fora, sem extrato): somam na conta e no geral, sem contar como extrato.
+    expect(totais(casos, {}, [{ conta: "ITAÚ", valor: 1000 }, { conta: "ITAÚ", valor: 500 }])).toMatchObject({
+      geral: 218500,
+      repasses: 6,
+      manual: 1500,
+      bancos: [
+        { banco: "BRADESCO", valor: 150000, repasses: 2 },
+        { banco: "ITAÚ", valor: 61500, repasses: 3, bancos: ["SANTANDER", "INTER", "ITAU", "lançamentos manuais"] },
+        { banco: "", valor: 7000 },
+      ],
+    });
+    // Conta sem nenhum extrato também ganha linha.
+    expect(totais([], {}, [{ conta: "BRADESCO", valor: 1000 }]).bancos).toMatchObject([{ banco: "BRADESCO", valor: 1000, repasses: 0 }]);
   });
 
   it("registra o que foi conferido para o relatório", () => {

@@ -66,3 +66,13 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
   banco** (Itaú, Banco do Brasil, Inter, Santander…) sai do **Itaú**.
 - Extrato **sem banco**: fica em linha à parte, destacada, até a pessoa escolher no relatório "Somar no Itaú" ou
   "Somar no Bradesco" para cada repasse. A escolha vale só para aquela conferência (nada é guardado).
+- **Relatório por conta**: no topo do relatório dá para escolher "Todos", "Só Bradesco" ou "Só Itaú". Com uma conta
+  escolhida, totais, lançamentos manuais, contratos e impressão mostram só os repasses daquela conta. Repasse sem
+  banco e sem conta escolhida, e recibo sem extrato, só aparecem em "Todos".
+- **Extrato excluído** pela pessoa no relatório: sai da soma e da análise, e o contrato dele não aparece mais (não
+  vira "recibo sem extrato"). "Colocar de volta" desfaz.
+- **Dados bancários**: cada contrato do relatório mostra, por proprietário, CPF/CNPJ, forma de pagamento, banco,
+  agência, conta, tipo de conta e a descrição do cadastro (costuma indicar o titular da conta), como estão no extrato.
+- **Lançamento manual**: repasse feito por fora do NIDO, sem extrato. A pessoa digita o valor no relatório e escolhe
+  a conta (Itaú ou Bradesco); ele soma no total da conta e no geral, não conta como extrato e não é conferido.
+  Vale só para aquela conferência (nada é guardado).
