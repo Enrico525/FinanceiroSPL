@@ -91,6 +91,9 @@ describe("leitura NIDO", () => {
     const [r] = lerRepasses([{ numero: 1, texto }]);
     expect(r.pago).toBe(243221);
     expect(r.linhas).toHaveLength(2);
+    // Layout de 11/2026: a linha de pagamento e o Total Pendente juntos, com o mesmo valor.
+    const comPendente = texto.replace(/^Total Pago.*$/m, "Total Pendente Contrato 100 Total Pendente Contrato 100   0,00 0,00   2.432,21 2.432,21 ");
+    expect(lerRepasses([{ numero: 1, texto: comPendente }])[0].pago).toBe(243221);
   });
 
   it("extrato sem banco informado", () => {

@@ -162,6 +162,7 @@ export function lerRepasses(paginas: PaginaExtraida[], arquivo = ""): Repasse[] 
   // A descrição pode quebrar de linha: o que vier entre "Pagamento:" e "Contrato" continua a descrição.
   let naDescricao = false;
   let atual: Repasse | null = null;
+  const comPagamento = new Set<Repasse>();
   for (const { pagina, linha } of linhas(paginas)) {
     let m: RegExpMatchArray | null;
     if ((m = linha.match(/^(.+?) - \(ID: \d+\)(?: ((?:CPF|CNPJ): [\d.\/-]+))?/))) {
@@ -213,10 +214,16 @@ export function lerRepasses(paginas: PaginaExtraida[], arquivo = ""): Repasse[] 
     } else if ((m = linha.match(/^Repasse:   (\d+) - Competência: (\d{2}\/\d{4})/))) {
       atual.numero = m[1];
       atual.competencia = m[2];
-    } else if ((m = linha.match(RE_PENDENTE))) atual.pago += centavos(m[2]) - centavos(m[1]);
+    } else if ((m = linha.match(RE_PENDENTE))) {
+      // Extrato com a linha "PAGAMENTO AGUARDANDO…" também traz o Total Pendente com o mesmo valor: conta uma vez só.
+      if (!comPagamento.has(atual)) atual.pago += centavos(m[2]) - centavos(m[1]);
+    }
     else if ((m = linha.match(RE_REPASSE_LINHA))) {
       const [, data, historico, bruto, part, deb, cred] = m;
-      if (PAGAMENTO.test(historico)) atual.pago += centavos(deb);
+      if (PAGAMENTO.test(historico)) {
+        atual.pago += centavos(deb);
+        comPagamento.add(atual);
+      }
       else {
         if (!atual.vencimento) atual.vencimento = data;
         atual.linhas.push({

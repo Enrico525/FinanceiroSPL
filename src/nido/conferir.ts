@@ -160,7 +160,7 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
     if (intermediacao.bruto !== aluguel)
       ap.push({
         tipo: "manual",
-        texto: `Taxa de intermediação de ${reais(intermediacao.bruto)} diferente de 100% do aluguel (${reais(aluguel)}): conferir manualmente.`,
+        texto: `Taxa de intermediação de ${reais(intermediacao.bruto)} diferente de 100% do aluguel (${reais(aluguel)}): depende do acordo, conferir manualmente.`,
       });
     else ok.push(`Taxa de intermediação de ${reais(intermediacao.bruto)} = 100% do aluguel.`);
   } else if (modo !== "pre-cadastro" && aluguel > 0) {
@@ -191,6 +191,11 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
     const valor = l.debito || l.credito;
     // Abono e IRRF são crédito ao inquilino e débito ao proprietário; o resto é o contrário.
     const vaiComoCredito = l.debito > 0;
+    // Taxa ADM cobrada no recibo só vale por acordo do contrato (ex.: 7840), que não aparece no PDF.
+    if (/^taxa adm/i.test(h)) {
+      ap.push({ tipo: "manual", texto: `"${h}" (${reais(valor)}) no recibo: só vale por acordo do contrato, conferir manualmente.` });
+      continue;
+    }
     if (ehDiferenca(h)) {
       // Se também estiver no extrato, o apontamento manual já sai pelas linhas do extrato.
       if (!tirar(valor, vaiComoCredito, h))
