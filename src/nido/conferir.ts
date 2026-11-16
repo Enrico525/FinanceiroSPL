@@ -1,6 +1,6 @@
 // Regras de conferência Recibo do Locatário × Extrato de Repasse, definidas com o financeiro.
 // Tudo em centavos inteiros. Nenhuma regra aqui depende de IA.
-import type { LinhaRepasse, Recibo, Repasse } from "./ler";
+import type { LinhaRepasse, Pagamento, Recibo, Repasse } from "./ler";
 
 export type Apontamento = { tipo: "divergencia" | "manual" | "aviso"; texto: string };
 export type Caso = {
@@ -11,7 +11,7 @@ export type Caso = {
   inquilino: string;
   proprietarios: string[];
   /** Um por extrato (proprietário): banco do repasse ("" = não informado) e valor pago/a repassar, em centavos. */
-  repasses: { id: string; proprietario: string; banco: string; valor: number; onde: string }[];
+  repasses: { id: string; proprietario: string; banco: string; pagamento: Pagamento; valor: number; onde: string }[];
   /** Onde achar no PDF: "Extrato: arquivo.pdf, pág. 3". */
   onde: string[];
   /** sem_extrato / sem_recibo: o outro lado não está nos arquivos enviados. */
@@ -230,21 +230,23 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
 export const CONTA_BRADESCO = "BRADESCO";
 export const CONTA_ITAU = "ITAÚ";
 export type Conta = typeof CONTA_BRADESCO | typeof CONTA_ITAU;
-const contaDeSaida = (banco: string) => (!banco ? "" : simples(banco).includes("bradesco") ? CONTA_BRADESCO : CONTA_ITAU);
+export const contaDeSaida = (banco: string) => (!banco ? "" : simples(banco).includes("bradesco") ? CONTA_BRADESCO : CONTA_ITAU);
 export const chaveRepasse = (contrato: string, proprietario: string) => `${contrato}|${proprietario}`;
 
 /**
  * Soma dos repasses (valor pago/a repassar), no geral e por conta de saída (maior primeiro).
  * Repasse sem banco no extrato fica em "" até a pessoa escolher a conta em `escolhas` (chave: chaveRepasse).
+ * `manuais`: repasses feitos por fora do NIDO (sem extrato), digitados no relatório; só somam, não são conferidos.
  */
-export function totais(casos: Caso[], escolhas: Record<string, Conta> = {}) {
+export type Manual = { conta: Conta; valor: number };
+export function totais(casos: Caso[], escolhas: Record<string, Conta> = {}, manuais: Manual[] = []) {
   const porConta = new Map<string, { valor: number; repasses: number; bancos: string[] }>();
-  const semBanco: { chave: string; contrato: string; proprietario: string; valor: number; onde: string; conta: Conta | null }[] = [];
+  const semBanco: { id: string; chave: string; contrato: string; proprietario: string; valor: number; onde: string; conta: Conta | null }[] = [];
   for (const c of casos)
     for (const r of c.repasses) {
       const chave = chaveRepasse(c.contrato, r.proprietario);
       const escolhida = r.banco ? null : (escolhas[chave] ?? null);
-      if (!r.banco) semBanco.push({ chave, contrato: c.contrato, proprietario: r.proprietario, valor: r.valor, onde: r.onde, conta: escolhida });
+      if (!r.banco) semBanco.push({ id: r.id, chave, contrato: c.contrato, proprietario: r.proprietario, valor: r.valor, onde: r.onde, conta: escolhida });
       const conta = escolhida ?? contaDeSaida(r.banco);
       const nome = r.banco || "sem banco (escolhido)";
       const t = porConta.get(conta) ?? { valor: 0, repasses: 0, bancos: [] };
@@ -254,8 +256,13 @@ export function totais(casos: Caso[], escolhas: Record<string, Conta> = {}) {
         bancos: conta && !t.bancos.includes(nome) ? [...t.bancos, nome] : t.bancos,
       });
     }
+  for (const m of manuais) {
+    const t = porConta.get(m.conta) ?? { valor: 0, repasses: 0, bancos: [] };
+    const nome = "lançamentos manuais";
+    porConta.set(m.conta, { ...t, valor: t.valor + m.valor, bancos: t.bancos.includes(nome) ? t.bancos : [...t.bancos, nome] });
+  }
   const bancos = [...porConta].map(([banco, t]) => ({ banco, ...t })).sort((a, b) => b.valor - a.valor);
-  return { geral: bancos.reduce((n, b) => n + b.valor, 0), repasses: bancos.reduce((n, b) => n + b.repasses, 0), bancos, semBanco };
+  return { geral: bancos.reduce((n, b) => n + b.valor, 0), repasses: bancos.reduce((n, b) => n + b.repasses, 0), manual: manuais.reduce((n, m) => n + m.valor, 0), bancos, semBanco };
 }
 
 /** Identifica um extrato de repasse: o mesmo número e proprietário é o mesmo extrato (cópia ou versão corrigida). */
@@ -264,6 +271,18 @@ export const idRepasse = (r: Repasse) => `${r.numero}|${r.proprietario}`;
 /** "arquivo.pdf, pág. 3", e no PDF juntado também o arquivo original. */
 const local = (r: Recibo | Repasse) =>
   `${r.arquivo}, pág. ${r.pagina}${r.origem ? ` (no juntado, veio de ${r.origem})` : ""}`;
+
+/**
+ * Conferência sem os extratos que a pessoa excluiu. O contrato que ficou só com o recibo sai junto:
+ * não deve voltar ao resultado nem ao relatório como "recibo sem extrato".
+ */
+export function conferirSem(recibos: Recibo[], repasses: Repasse[], excluidos: Set<string>): Caso[] {
+  const fora = new Set(repasses.filter((r) => excluidos.has(idRepasse(r))).map((r) => r.contrato));
+  return conferir(
+    recibos,
+    repasses.filter((r) => !excluidos.has(idRepasse(r))),
+  ).filter((c) => !(c.status === "sem_extrato" && fora.has(c.contrato)));
+}
 
 export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso[] {
   // O mesmo recibo/extrato pode vir em dois arquivos enviados: cópia idêntica não é duplicidade.
@@ -326,7 +345,7 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
       inquilino: recibo?.locatario || r0?.inquilino || "",
       // Sem extrato, o proprietário vem do "LOCADOR" do recibo.
       proprietarios: unicos.length ? unicos.map((r) => r.proprietario) : recibo?.locador ? [recibo.locador] : [],
-      repasses: unicos.map((r) => ({ id: idRepasse(r), proprietario: r.proprietario, banco: r.banco, valor: r.pago, onde: local(r) })),
+      repasses: unicos.map((r) => ({ id: idRepasse(r), proprietario: r.proprietario, banco: r.banco, pagamento: r.pagamento, valor: r.pago, onde: local(r) })),
       onde: [
         ...g.recibos.map((r) => ["Recibo", r] as const),
         ...g.repasses.map((r) => ["Extrato", r] as const),

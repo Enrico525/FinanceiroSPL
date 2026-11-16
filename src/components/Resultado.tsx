@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { CONTA_BRADESCO, CONTA_ITAU, reais, totais, type Caso, type Conta } from "../nido/conferir";
+import { CONTA_BRADESCO, CONTA_ITAU, chaveRepasse, contaDeSaida, reais, totais, type Caso, type Conta, type Manual } from "../nido/conferir";
+import { valorDigitado } from "../nido/ler";
 import type { Modo } from "../App";
 
 const ROTULO = { divergencia: "Divergência", manual: "Conferir", aviso: "Aviso" } as const;
@@ -94,15 +95,48 @@ type PropsRelatorio = {
   removidos: number;
   aoRemoverRepasse: (id: string) => void;
   aoRestaurar: () => void;
+  manuais: Manual[];
+  aoMudarManuais: (m: Manual[]) => void;
 };
 
 const NOME_CONTA = { [CONTA_ITAU]: "Itaú", [CONTA_BRADESCO]: "Bradesco" } as const;
 
-function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, aoRemoverRepasse, aoRestaurar }: PropsRelatorio) {
+function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, aoRemoverRepasse, aoRestaurar, manuais, aoMudarManuais }: PropsRelatorio) {
   const titulo = Object.fromEntries(SECOES.map((s) => [s.status, s.titulo]));
-  const lista = secoes.flatMap((s) => casos.filter((c) => c.status === s.status));
-  const t = totais(lista, escolhas);
+  // Relatório separado por conta de saída: com "Bradesco" ou "Itaú" escolhido, tudo (totais, lançamentos manuais,
+  // contratos e impressão) mostra só os repasses daquela conta. Sem banco e sem conta escolhida: só em "Todos".
+  const [filtro, setFiltro] = useState<Conta | "">("");
+  const todos = secoes.flatMap((s) => casos.filter((c) => c.status === s.status));
+  const lista = filtro
+    ? todos
+        .map((c) => ({
+          ...c,
+          repasses: c.repasses.filter((r) => (r.banco ? contaDeSaida(r.banco) : escolhas[chaveRepasse(c.contrato, r.proprietario)]) === filtro),
+        }))
+        .filter((c) => c.repasses.length)
+    : todos;
+  const manuaisDaqui = manuais.filter((m) => !filtro || m.conta === filtro);
+  const t = totais(lista, escolhas, manuaisDaqui);
+  // Lançamento manual: repasse feito por fora do NIDO (sem extrato). Só soma; não há o que conferir.
+  const [valorManual, setValorManual] = useState("");
+  const [contaManual, setContaManual] = useState<Conta>(CONTA_ITAU);
+  const [erroManual, setErroManual] = useState(false);
+  const adicionarManual = (e: React.FormEvent) => {
+    e.preventDefault();
+    const valor = valorDigitado(valorManual);
+    setErroManual(!valor);
+    if (!valor) return;
+    aoMudarManuais([...manuais, { conta: filtro || contaManual, valor }]);
+    setValorManual("");
+  };
   const faltam = t.semBanco.filter((r) => !r.conta).length;
+  // Pesquisa da lista de excluir: só os dígitos contam, então "1.234,56" e "123456" acham o mesmo valor.
+  const [buscaContrato, setBuscaContrato] = useState("");
+  const [buscaValor, setBuscaValor] = useState("");
+  const digitos = (s: string) => s.replace(/\D/g, "");
+  const achados = lista.flatMap((c) =>
+    c.repasses.filter((r) => c.contrato.includes(digitos(buscaContrato)) && digitos(reais(r.valor)).includes(digitos(buscaValor))).map((r) => ({ c, r })),
+  );
   return (
     <div className="relatorio">
       <div className="acoes nao-imprimir">
@@ -113,16 +147,33 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
           Voltar ao resultado
         </button>
       </div>
-      <h2>Relatório de conferência</h2>
+      <div className="acoes filtro nao-imprimir" role="group" aria-label="Escolher o relatório por conta de saída">
+        <span>Relatório:</span>
+        {(["", CONTA_BRADESCO, CONTA_ITAU] as const).map((conta) => (
+          <button
+            key={conta}
+            type="button"
+            className={`botao botao--pequeno ${filtro === conta ? "" : "botao--secundario"}`}
+            aria-pressed={filtro === conta}
+            onClick={() => setFiltro(conta)}
+          >
+            {conta ? `Só ${NOME_CONTA[conta]}` : "Todos"}
+          </button>
+        ))}
+      </div>
+      <h2>Relatório de conferência{filtro && ` — ${NOME_CONTA[filtro]}`}</h2>
       <p className="caso__meta">
         Gerado em {new Date().toLocaleString("pt-BR")} · {lista.length} contratos ·{" "}
-        {secoes.map((s) => `${casos.filter((c) => c.status === s.status).length} ${s.titulo.toLowerCase()}`).join(" · ")}
+        {secoes.map((s) => `${lista.filter((c) => c.status === s.status).length} ${s.titulo.toLowerCase()}`).join(" · ")}
       </p>
       <section className="totais" aria-label="Totais a repassar">
         <p className="totais__geral">
           Total a repassar: <strong>{reais(t.geral)}</strong>
         </p>
-        <p className="caso__meta">Soma do valor pago/a repassar de {t.repasses} extrato(s) desta conferência.</p>
+        <p className="caso__meta">
+          Soma do valor pago/a repassar de {t.repasses} extrato(s) desta conferência
+          {manuaisDaqui.length > 0 && ` mais ${manuaisDaqui.length} lançamento(s) manual(is), que somam ${reais(t.manual)}`}.
+        </p>
         {removidos > 0 && (
           <p className="alerta nao-imprimir">
             {removidos} extrato(s) excluído(s) da soma e da análise.{" "}
@@ -133,9 +184,19 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
         )}
         <details className="soma-lista nao-imprimir">
           <summary>Ver os {t.repasses} repasses da soma (para excluir algum)</summary>
+          <div className="soma-lista__busca">
+            <label className="campo">
+              Pesquisar por número do contrato
+              <input type="search" inputMode="numeric" value={buscaContrato} onChange={(e) => setBuscaContrato(e.target.value)} placeholder="Ex.: 15215" />
+            </label>
+            <label className="campo">
+              Pesquisar por valor
+              <input type="search" inputMode="decimal" value={buscaValor} onChange={(e) => setBuscaValor(e.target.value)} placeholder="Ex.: 1.234,56" />
+            </label>
+          </div>
+          {achados.length === 0 && <p className="caso__meta">Nenhum repasse encontrado.</p>}
           <ul>
-            {lista.flatMap((c) =>
-              c.repasses.map((r) => (
+            {achados.map(({ c, r }) => (
                 <li key={r.id}>
                   <span>
                     <strong>Contrato {c.contrato}</strong> · <strong>{r.proprietario}</strong> · {r.banco || "sem banco"} ·{" "}
@@ -146,8 +207,7 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
                     Excluir
                   </button>
                 </li>
-              )),
-            )}
+            ))}
           </ul>
         </details>
         <table className="totais__bancos">
@@ -173,6 +233,48 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
             ))}
           </tbody>
         </table>
+        <div className={`sem-banco manuais ${manuaisDaqui.length ? "" : "nao-imprimir"}`}>
+          <p className="sem-banco__titulo">
+            <strong>Lançamentos manuais (repasses feitos por fora, sem extrato)</strong>
+          </p>
+          <form className="manuais__form nao-imprimir" onSubmit={adicionarManual}>
+            <label className="campo">
+              Valor
+              <input inputMode="decimal" value={valorManual} onChange={(e) => setValorManual(e.target.value)} placeholder="Ex.: 2.657,61" aria-invalid={erroManual} />
+            </label>
+            {!filtro && (
+              <span className="sem-banco__opcoes" role="radiogroup" aria-label="Conta do lançamento manual">
+                {([CONTA_ITAU, CONTA_BRADESCO] as const).map((conta) => (
+                  <label key={conta}>
+                    <input type="radio" name="conta-manual" checked={contaManual === conta} onChange={() => setContaManual(conta)} /> Somar no {NOME_CONTA[conta]}
+                  </label>
+                ))}
+              </span>
+            )}
+            <button type="submit" className="botao botao--pequeno">
+              Adicionar
+            </button>
+          </form>
+          {erroManual && (
+            <p className="alerta" role="alert">
+              Digite um valor maior que zero, como 2.657,61.
+            </p>
+          )}
+          <ul>
+            {manuais.map((m, i) =>
+              filtro && m.conta !== filtro ? null : (
+              <li key={i}>
+                <span>
+                  {NOME_CONTA[m.conta]} · <strong>{reais(m.valor)}</strong>
+                </span>
+                <button type="button" className="botao botao--texto nao-imprimir" onClick={() => aoMudarManuais(manuais.filter((_, j) => j !== i))}>
+                  Remover
+                </button>
+              </li>
+              ),
+            )}
+          </ul>
+        </div>
         {t.semBanco.length > 0 && (
           <div className={`sem-banco ${faltam ? "sem-banco--pendente" : ""}`}>
             <p className="sem-banco__titulo">
@@ -196,6 +298,9 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
                         {NOME_CONTA[conta]}
                       </label>
                     ))}
+                    <button type="button" className="botao botao--pequeno nao-imprimir" onClick={() => aoRemoverRepasse(r.id)}>
+                      Remover extrato
+                    </button>
                   </span>
                 </li>
               ))}
@@ -229,6 +334,37 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
               <li key={o}>{o}</li>
             ))}
           </ul>
+          {c.repasses.length > 0 && (
+            <ul className="relatorio__banco" aria-label="Dados bancários">
+              {c.repasses.map((r) => (
+                <li key={r.id}>
+                  <strong>{r.proprietario}</strong>
+                  {r.pagamento.documento && ` (${r.pagamento.documento})`} —{" "}
+                  {r.banco
+                    ? [
+                        r.pagamento.forma,
+                        r.banco,
+                        r.pagamento.agencia && `Ag. ${r.pagamento.agencia}`,
+                        r.pagamento.conta && `Conta ${r.pagamento.conta}`,
+                        r.pagamento.tipoConta,
+                        r.pagamento.descricao && `Obs.: ${r.pagamento.descricao}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    : "sem dados bancários no extrato"}{" "}
+                  · <strong>{reais(r.valor)}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="relatorio__remover nao-imprimir">
+            {c.repasses.map((r) => (
+              // Sem banco (em vermelho): botão cheio; os demais, contornado.
+              <button key={r.id} type="button" className={`botao botao--pequeno ${r.banco ? "botao--secundario" : ""}`} onClick={() => aoRemoverRepasse(r.id)}>
+                Remover extrato de {r.proprietario}
+              </button>
+            ))}
+          </p>
           <ul>
             {[...c.apontamentos]
               .sort((a, b) => PESO[a.tipo] - PESO[b.tipo])
@@ -263,6 +399,7 @@ export function Resultado({ casos: originais, modo, removidos, aoRemoverRepasse,
   // Some ao começar outra conferência: nada é guardado.
   const [aceitos, setAceitos] = useState<Set<string>>(new Set());
   const [escolhas, setEscolhas] = useState<Record<string, Conta>>({});
+  const [manuais, setManuais] = useState<Manual[]>([]);
   const id = (c: Caso) => `${c.contrato}|${c.vencimento}`;
   const casos: Visto[] = originais.map((c) => (aceitos.has(id(c)) ? { ...c, status: "ok", aceito: true } : c));
   const aceitar = (c: Caso, sim: boolean) =>
@@ -287,6 +424,8 @@ export function Resultado({ casos: originais, modo, removidos, aoRemoverRepasse,
         removidos={removidos}
         aoRemoverRepasse={aoRemoverRepasse}
         aoRestaurar={aoRestaurar}
+        manuais={manuais}
+        aoMudarManuais={setManuais}
       />
     );
 

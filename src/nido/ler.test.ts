@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { centavos, lerRecibos, lerRepasses } from "./ler";
+import { centavos, lerRecibos, lerRepasses, valorDigitado } from "./ler";
+
+describe("valorDigitado", () => {
+  it("aceita valor com ou sem ponto de milhar e centavos; recusa o resto", () => {
+    expect(["2657,61", "2.657,61", " 1.728,49 ", "425", "10,5", "1.234.567,00"].map(valorDigitado)).toEqual([265761, 265761, 172849, 42500, 1050, 123456700]);
+    expect(["", "abc", "2,657.61", "26.57,61", "-10,00", "1,234", "R$ 10,00"].map(valorDigitado)).toEqual([null, null, null, null, null, null, null]);
+  });
+});
 
 // Texto no formato que o pdf.js extrai dos relatórios do NIDO (dados fictícios).
 const RECIBO = `Special Administração de Bens Ltda Special Administração de Bens Ltda
@@ -61,6 +68,7 @@ describe("leitura NIDO", () => {
     expect(r).toMatchObject({
       proprietario: "BELTRANO SILVA",
       banco: "BANCO TESTE",
+      pagamento: { documento: "CPF: 000.000.000-00", forma: "Transferência Bancária", agencia: "0001", conta: "00000-0", tipoConta: "", descricao: "" },
       contrato: "100",
       situacao: "Normal",
       taxaAdm: 60000,
@@ -87,7 +95,26 @@ describe("leitura NIDO", () => {
 
   it("extrato sem banco informado", () => {
     const texto = REPASSE.replace(/^Pagamento: .*$/m, "Pagamento: Pagamento:   Banco: Banco:   Ag.: Ag.:   Conta: Conta:");
-    expect(lerRepasses([{ numero: 1, texto }])[0].banco).toBe("");
+    const [r] = lerRepasses([{ numero: 1, texto }]);
+    expect(r.banco).toBe("");
+    expect(r.pagamento).toEqual({ documento: "CPF: 000.000.000-00", forma: "", agencia: "", conta: "", tipoConta: "", descricao: "" });
+  });
+
+  it("dados bancários com tipo de conta e descrição quebrada em duas linhas", () => {
+    const texto = REPASSE.replace(
+      /^Pagamento: .*$/m,
+      "Pagamento: Pagamento:   TED   Banco: Banco:   BANCO TESTE   Ag.: Ag.:   0001-9   Conta: Conta:   00000-0   Tipo conta: Tipo conta:   Poupança   Descrição: Descrição:   TITULAR CICRANO CPF\n111.111.111-11",
+    );
+    const [r] = lerRepasses([{ numero: 1, texto }]);
+    expect(r.pagamento).toEqual({
+      documento: "CPF: 000.000.000-00",
+      forma: "TED",
+      agencia: "0001-9",
+      conta: "00000-0",
+      tipoConta: "Poupança",
+      descricao: "TITULAR CICRANO CPF 111.111.111-11",
+    });
+    expect(r).toMatchObject({ contrato: "100", pago: 243221, endereco: "R Exemplo Nº 1 - Und. 2, Bairro Cep: 00000-000 - São Paulo -SP" });
   });
 
   it("extrato ainda não pago: usa o crédito do Total Pendente", () => {

@@ -25,6 +25,18 @@ export type LinhaRepasse = {
   debito: number;
   credito: number;
 };
+/** Dados para pagar o proprietário, como estão no cabeçalho do extrato ("" quando o extrato não informa). */
+export type Pagamento = {
+  /** "CPF: 000.000.000-00" ou "CNPJ: ..." do proprietário. */
+  documento: string;
+  /** "Transferência Bancária", "TED"… */
+  forma: string;
+  agencia: string;
+  conta: string;
+  tipoConta: string;
+  /** Observação do cadastro: costuma dizer o titular da conta quando não é o proprietário. */
+  descricao: string;
+};
 export type Repasse = {
   arquivo: string;
   pagina: number;
@@ -33,6 +45,7 @@ export type Repasse = {
   proprietario: string;
   /** Banco do repasse ao proprietário ("" quando o extrato não informa). */
   banco: string;
+  pagamento: Pagamento;
   contrato: string;
   endereco: string;
   situacao: string;
@@ -61,6 +74,12 @@ export function centavos(v: string): number {
   const [inteiro, dec] = v.replace(/^-/, "").replace(/\./g, "").split(",");
   const c = Number(inteiro) * 100 + Number(dec);
   return negativo ? -c : c;
+}
+
+/** Valor digitado por uma pessoa ("2657,61", "2.657,61", "2657") → centavos; null quando não é um valor. */
+export function valorDigitado(texto: string): number | null {
+  const m = texto.trim().match(/^(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?$/);
+  return m ? Number(m[1].replace(/\./g, "")) * 100 + Number((m[2] ?? "").padEnd(2, "0")) : null;
 }
 
 /** "5,0000" → 50000. */
@@ -132,23 +151,48 @@ export function lerRecibos(paginas: PaginaExtraida[], arquivo = ""): Recibo[] {
   return recibos;
 }
 
+const ROTULOS_PAGAMENTO = ["Banco:", "Ag.:", "Conta:", "Tipo conta:", "Descrição:"];
+
 export function lerRepasses(paginas: PaginaExtraida[], arquivo = ""): Repasse[] {
   const repasses: Repasse[] = [];
   let proprietario = "";
   let banco = "";
+  const semPagamento = (documento = ""): Pagamento => ({ documento, forma: "", agencia: "", conta: "", tipoConta: "", descricao: "" });
+  let pagamento = semPagamento();
+  // A descrição pode quebrar de linha: o que vier entre "Pagamento:" e "Contrato" continua a descrição.
+  let naDescricao = false;
   let atual: Repasse | null = null;
   for (const { pagina, linha } of linhas(paginas)) {
     let m: RegExpMatchArray | null;
-    if ((m = linha.match(/^(.+?) - \(ID: \d+\)/))) {
+    if ((m = linha.match(/^(.+?) - \(ID: \d+\)(?: ((?:CPF|CNPJ): [\d.\/-]+))?/))) {
       proprietario = m[1];
       banco = "";
-    } else if (linha.startsWith("Pagamento:")) banco = linha.match(/Banco:   (.+?)   Ag\.:/)?.[1] ?? "";
+      pagamento = semPagamento(m[2]);
+      naDescricao = false;
+    } else if (linha.startsWith("Pagamento:")) {
+      banco = linha.match(/Banco:   (.+?)   Ag\.:/)?.[1] ?? "";
+      // "Pagamento:   TED   Banco:   X   Ag.:   1   Conta:   2-3   Tipo conta:   Corrente   Descrição:   …"
+      const blocos = linha.split("   ");
+      const valor = (i: number) => (i > 0 && blocos[i] && !ROTULOS_PAGAMENTO.includes(blocos[i]) ? blocos[i] : "");
+      const campo = (rotulo: string) => valor(blocos.indexOf(rotulo) + 1);
+      pagamento = {
+        documento: pagamento.documento,
+        forma: valor(1),
+        agencia: campo("Ag.:"),
+        conta: campo("Conta:"),
+        tipoConta: campo("Tipo conta:"),
+        descricao: blocos.includes("Descrição:") ? blocos.slice(blocos.indexOf("Descrição:") + 1).join(" ") : "",
+      };
+      naDescricao = pagamento.descricao !== "";
+    } else if (naDescricao && !CONTRATO.test(linha)) pagamento.descricao += ` ${linha}`;
     else if ((m = linha.match(CONTRATO))) {
+      naDescricao = false;
       atual = {
         arquivo,
         pagina,
         proprietario,
         banco,
+        pagamento,
         contrato: m[1],
         endereco: "",
         situacao: "",

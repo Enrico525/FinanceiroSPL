@@ -3,7 +3,7 @@ import { buscarUsuario, ErroApi, sair } from "./api";
 import { lerPdf, ErroLeitura } from "./pdf/extrair";
 import { juntarPdfs } from "./pdf/juntar";
 import { lerRecibos, lerRepasses, type Recibo, type Repasse } from "./nido/ler";
-import { conferir, idRepasse } from "./nido/conferir";
+import { conferirSem, idRepasse } from "./nido/conferir";
 import { SeletorPdf, type ArquivoLido } from "./components/SeletorPdf";
 import { Resultado } from "./components/Resultado";
 import { Login } from "./components/Login";
@@ -36,7 +36,7 @@ export function App() {
   const [base, setBase] = useState<{ recibos: Recibo[]; repasses: Repasse[] } | null>(null);
   const [removidos, setRemovidos] = useState<Set<string>>(new Set());
   const casos = useMemo(
-    () => base && conferir(base.recibos, base.repasses.filter((r) => !removidos.has(idRepasse(r)))),
+    () => base && conferirSem(base.recibos, base.repasses, removidos),
     [base, removidos],
   );
   const [pagina, setPagina] = useState<Pagina>("geral");
