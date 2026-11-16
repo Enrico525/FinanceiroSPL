@@ -75,7 +75,8 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
   "Somar no Bradesco" para cada repasse. A escolha vale só para aquela conferência (nada é guardado).
 - **Relatório por conta**: no topo do relatório dá para escolher "Todos", "Só Bradesco" ou "Só Itaú". Com uma conta
   escolhida, totais, lançamentos manuais, contratos e impressão mostram só os repasses daquela conta. Repasse sem
-  banco e sem conta escolhida, e recibo sem extrato, só aparecem em "Todos".
+  banco e sem conta escolhida, e recibo sem extrato, só aparecem em "Todos". Os botões "Salvar só do Itaú" e
+  "Salvar só do Bradesco" escolhem a conta e já abrem a impressão.
 - **Extrato excluído** pela pessoa no relatório: sai da soma e da análise, e o contrato dele não aparece mais (não
   vira "recibo sem extrato"). "Colocar de volta" desfaz.
 - **Dados bancários**: cada contrato do relatório mostra, por proprietário, CPF/CNPJ, forma de pagamento, banco,

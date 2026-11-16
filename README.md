@@ -42,7 +42,8 @@ Os PDFs são lidos e conferidos **no navegador**, com regras fixas e sem IA: nad
   no total da conta escolhida. Só somam; não são conferidos.
 - **Remover extrato:** botão em cada contrato, no quadro “sem banco” e numa lista com pesquisa por número do
   contrato e por valor. O contrato removido sai do resultado e do relatório; “Colocar de volta” desfaz.
-- “Imprimir / salvar em PDF” gera a cópia para guardar.
+- “Imprimir / salvar em PDF” gera a cópia do que está na tela; “Salvar só do Itaú” e “Salvar só do Bradesco”
+  já abrem a impressão com o relatório daquela conta.
 
 ## Como funciona
 
