@@ -57,6 +57,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   "Total Pendente" de cada página, e a soma do Itaú bateu com a soma manual do financeiro depois de tirar um extrato
   e digitar 4 lançamentos manuais; as divergências desse lote ainda não foram revisadas com o financeiro.
 
+- Juros de condomínio são repassados mas **não** entram na base da taxa ADM (hoje o código soma todos os juros):
+  falta saber como a linha aparece no extrato e se a multa de condomínio segue a mesma regra. Perguntas para o
+  financeiro em `docs/REGRAS-PARA-FINANCEIRO.md`.
 - Gerar a remessa de pagamento do Itaú (SISPAG CNAB 240) com os repasses que bateram 100% e estão "AGUARDANDO
   EFETIVAÇÃO": pausado a pedido do negócio. Faltam: tabela nome do banco → código, origem do "seu número", formas de
   pagamento além de transferência, onde guardar os dados da conta da Special (Secret no Worker) e validar com o Itaú.
