@@ -154,20 +154,32 @@ input:focus-visible + .botao, label.botao:focus-within { outline: 3px solid var(
 .nota { margin: 0.5rem 0 0; font-size: 0.9rem; }
 .botao--relatorio { align-self: flex-start; }
 .botao--pequeno { padding: 0.2rem 0.7rem; font-size: 0.85rem; }
-.relatorio__remover { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.relatorio__remover:empty { display: none; }
 .filtro { gap: 0.5rem; margin: 0.75rem 0; }
 .manuais__form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem 1rem; margin-bottom: 0.5rem; }
 .manuais__form .campo { width: 12rem; }
-.relatorio ul.relatorio__banco { margin: 0.25rem 0 0.5rem; padding: 0.4rem 0.6rem; border-left: 4px solid var(--vinho); background: var(--bege); word-break: break-word; }
 
 .relatorio { background: var(--creme); border: 1px solid var(--linha); border-radius: var(--raio); padding: 1.25rem; }
 .relatorio h2 { margin: 0 0 0.25rem; }
-.relatorio__caso { border-top: 1px solid var(--linha); padding: 0.6rem 0; break-inside: avoid; }
-.relatorio__caso p { margin: 0 0 0.25rem; }
+.pagamentos { margin-top: 1.25rem; }
+.pagamentos h3 { margin: 0 0 0.4rem; font-size: 1.05rem; color: var(--vinho); }
+.pagamentos__tabela { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.pagamentos__destaque { font-size: 1.15rem; }
+.pagamentos__conta { font-size: 1.1rem; color: var(--vinho); background: var(--bege); padding: 0.1rem 0.35rem; border-radius: 4px; width: fit-content; }
+.pagamentos__valor strong { font-size: 1.15rem; }
+.pagamentos__tabela th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 2px solid var(--vinho); padding: 0.3rem 0.4rem; }
+.pagamentos__tabela td { vertical-align: top; border-bottom: 1px solid var(--linha); padding: 0.35rem 0.4rem; word-break: break-word; }
+.pagamentos__tabela td > * { display: block; }
+.pagamentos__tabela tr { break-inside: avoid; }
+.pagamentos__tabela .selo { display: inline-block; margin-top: 0.15rem; }
+.pagamentos__valor { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pagamentos__valor .botao { display: inline; margin-top: 0.15rem; }
+@media (max-width: 640px) {
+  .pagamentos__tabela thead { display: none; }
+  .pagamentos__tabela tr { display: block; border-bottom: 1px solid var(--linha); padding: 0.3rem 0; }
+  .pagamentos__tabela td { display: block; border: 0; padding: 0.1rem 0; text-align: left; }
+}
 .relatorio ul { margin: 0; padding: 0; list-style: none; font-size: 0.9rem; }
 .relatorio li + li { margin-top: 0.2rem; }
-.conferido span { font-weight: 700; color: var(--vinho); margin-right: 0.15rem; }
 
 @media print {
   .topo, .aviso-topo, .subtitulo, .lateral, .alerta, .nao-imprimir, .conteudo > .acoes { display: none !important; }
@@ -186,8 +198,6 @@ input:focus-visible + .botao, label.botao:focus-within { outline: 3px solid var(
 .selo--aviso { background: transparent; border-style: dashed; font-weight: 400; }
 .selo--aceito { background: var(--bege); font-weight: 600; }
 .caso .botao--texto { font-size: 0.85rem; margin-top: 0.25rem; }
-.relatorio__contrato { font-size: 1.05rem; }
-.relatorio__proprietario { font-size: 1.05rem; }
 .totais { border: 2px solid var(--vinho); border-radius: var(--raio); padding: 1rem; margin: 0.75rem 0 1rem; break-inside: avoid; }
 .totais__geral { margin: 0; font-size: 1.2rem; }
 .totais__geral strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }

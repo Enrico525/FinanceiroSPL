@@ -4,7 +4,8 @@ import { z } from "zod";
 
 export const LIMITES = {
   bytesPorArquivo: 20 * 1024 * 1024,
-  paginasPorDocumento: 200,
+  // Lote do financeiro junta ~350–400 extratos (1 página cada) num PDF só.
+  paginasPorDocumento: 1000,
   // Teto provisório; recalibrar após escolher o modelo e medir documentos reais.
   caracteresTotais: 400_000,
   // Abaixo disso, por página em média, o PDF provavelmente é digitalizado.
