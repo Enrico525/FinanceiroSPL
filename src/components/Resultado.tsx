@@ -174,6 +174,11 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
           Soma do valor pago/a repassar de {t.repasses} extrato(s) desta conferência
           {manuaisDaqui.length > 0 && ` mais ${manuaisDaqui.length} lançamento(s) manual(is), que somam ${reais(t.manual)}`}.
         </p>
+        {t.caucao.extratos > 0 && (
+          <p className="caso__meta">
+            <strong>Fora do total:</strong> {t.caucao.extratos} depósito(s) caução, que somam {reais(t.caucao.valor)}. Depósito caução não entra na soma.
+          </p>
+        )}
         {removidos > 0 && (
           <p className="alerta nao-imprimir">
             {removidos} extrato(s) excluído(s) da soma e da análise.{" "}
@@ -201,6 +206,7 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
                   <span>
                     <strong>Contrato {c.contrato}</strong> · <strong>{r.proprietario}</strong> · {r.banco || "sem banco"} ·{" "}
                     <strong>{reais(r.valor)}</strong>
+                    {r.caucao > 0 && ` (depósito caução de ${reais(r.caucao)}: não soma)`}
                     <span className="caso__meta"> · Extrato: {r.onde}</span>
                   </span>
                   <button type="button" className="botao botao--texto" onClick={() => aoRemoverRepasse(r.id)}>
@@ -353,6 +359,7 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
                         .join(" · ")
                     : "sem dados bancários no extrato"}{" "}
                   · <strong>{reais(r.valor)}</strong>
+                  {r.caucao > 0 && ` · depósito caução de ${reais(r.caucao)}: não entra no total`}
                 </li>
               ))}
             </ul>

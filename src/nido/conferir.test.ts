@@ -116,6 +116,27 @@ describe("conferência recibo × repasse", () => {
     expect(conferirSem(recibos, [a, b], new Set()).map((c) => c.contrato)).toEqual(["100", "200", "300"]);
   });
 
+  it("depósito caução não entra nos totais", () => {
+    const casos = conferir([], [
+      repasse([["Aluguel", 100000, true]], { contrato: "1", numero: "1", banco: "ITAU" }),
+      // Só caução: fora da soma, da contagem e do quadro "sem banco".
+      repasse([["Depósito Caução", 1050000, true]], { contrato: "2", numero: "2", banco: "", situacao: "PRE-CADASTRO" }),
+      repasse([["Depósito Caução", 750000, true]], { contrato: "3", numero: "3", banco: "BRADESCO", situacao: "PRE-CADASTRO" }),
+      // Caução junto com aluguel: só o aluguel soma.
+      repasse([["Aluguel", 200000, true], ["Deposito Caucao", 50000, true]], { contrato: "4", numero: "4", banco: "BRADESCO" }),
+    ]);
+    expect(totais(casos)).toMatchObject({
+      geral: 300000,
+      repasses: 2,
+      caucao: { valor: 1850000, extratos: 3 },
+      bancos: [
+        { banco: "BRADESCO", valor: 200000, repasses: 1 },
+        { banco: "ITAÚ", valor: 100000, repasses: 1 },
+      ],
+      semBanco: [],
+    });
+  });
+
   it("soma os repasses: Bradesco separado, todos os outros bancos no Itaú", () => {
     const r = (n: string, valor: number, banco: string) => repasse([["Aluguel", valor, true]], { contrato: n, numero: n, banco });
     const casos = conferir([], [

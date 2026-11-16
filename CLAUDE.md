@@ -41,6 +41,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   extrato aparecem em cada contrato do relatório (tela e impressão), só como texto e só em memória.
 - Extrato excluído pela pessoa (11/2026): o contrato sai do resultado e do relatório, em vez de virar "recibo sem
   extrato" (`conferirSem`).
+- Depósito caução (11/2026): a linha "Depósito Caução" do extrato nunca soma nos totais do relatório (`totais`);
+  a conferência do contrato não muda.
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
 
 ## Pendências (aguardando o negócio)

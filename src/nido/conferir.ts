@@ -10,8 +10,11 @@ export type Caso = {
   situacao: string;
   inquilino: string;
   proprietarios: string[];
-  /** Um por extrato (proprietário): banco do repasse ("" = não informado) e valor pago/a repassar, em centavos. */
-  repasses: { id: string; proprietario: string; banco: string; pagamento: Pagamento; valor: number; onde: string }[];
+  /**
+   * Um por extrato (proprietário): banco do repasse ("" = não informado) e valor pago/a repassar, em centavos.
+   * `caucao`: parte desse valor que é "Depósito Caução" (não entra nos totais do relatório).
+   */
+  repasses: { id: string; proprietario: string; banco: string; pagamento: Pagamento; valor: number; caucao: number; onde: string }[];
   /** Onde achar no PDF: "Extrato: arquivo.pdf, pág. 3". */
   onde: string[];
   /** sem_extrato / sem_recibo: o outro lado não está nos arquivos enviados. */
@@ -239,19 +242,29 @@ export const chaveRepasse = (contrato: string, proprietario: string) => `${contr
  * `manuais`: repasses feitos por fora do NIDO (sem extrato), digitados no relatório; só somam, não são conferidos.
  */
 export type Manual = { conta: Conta; valor: number };
+// Depósito caução nunca entra nos totais a repassar (regra do financeiro, 11/2026).
+const ehCaucao = (h: string) => /^dep[oó]sito cau[cç][aã]o/i.test(h);
+
 export function totais(casos: Caso[], escolhas: Record<string, Conta> = {}, manuais: Manual[] = []) {
+  const caucao = { valor: 0, extratos: 0 };
   const porConta = new Map<string, { valor: number; repasses: number; bancos: string[] }>();
   const semBanco: { id: string; chave: string; contrato: string; proprietario: string; valor: number; onde: string; conta: Conta | null }[] = [];
   for (const c of casos)
     for (const r of c.repasses) {
+      const valor = r.valor - r.caucao;
+      if (r.caucao) {
+        caucao.valor += r.caucao;
+        caucao.extratos++;
+        if (!valor) continue; // extrato só de caução: fica fora da soma, da contagem e do quadro "sem banco"
+      }
       const chave = chaveRepasse(c.contrato, r.proprietario);
       const escolhida = r.banco ? null : (escolhas[chave] ?? null);
-      if (!r.banco) semBanco.push({ id: r.id, chave, contrato: c.contrato, proprietario: r.proprietario, valor: r.valor, onde: r.onde, conta: escolhida });
+      if (!r.banco) semBanco.push({ id: r.id, chave, contrato: c.contrato, proprietario: r.proprietario, valor, onde: r.onde, conta: escolhida });
       const conta = escolhida ?? contaDeSaida(r.banco);
       const nome = r.banco || "sem banco (escolhido)";
       const t = porConta.get(conta) ?? { valor: 0, repasses: 0, bancos: [] };
       porConta.set(conta, {
-        valor: t.valor + r.valor,
+        valor: t.valor + valor,
         repasses: t.repasses + 1,
         bancos: conta && !t.bancos.includes(nome) ? [...t.bancos, nome] : t.bancos,
       });
@@ -262,7 +275,7 @@ export function totais(casos: Caso[], escolhas: Record<string, Conta> = {}, manu
     porConta.set(m.conta, { ...t, valor: t.valor + m.valor, bancos: t.bancos.includes(nome) ? t.bancos : [...t.bancos, nome] });
   }
   const bancos = [...porConta].map(([banco, t]) => ({ banco, ...t })).sort((a, b) => b.valor - a.valor);
-  return { geral: bancos.reduce((n, b) => n + b.valor, 0), repasses: bancos.reduce((n, b) => n + b.repasses, 0), manual: manuais.reduce((n, m) => n + m.valor, 0), bancos, semBanco };
+  return { geral: bancos.reduce((n, b) => n + b.valor, 0), repasses: bancos.reduce((n, b) => n + b.repasses, 0), manual: manuais.reduce((n, m) => n + m.valor, 0), caucao, bancos, semBanco };
 }
 
 /** Identifica um extrato de repasse: o mesmo número e proprietário é o mesmo extrato (cópia ou versão corrigida). */
@@ -345,7 +358,7 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
       inquilino: recibo?.locatario || r0?.inquilino || "",
       // Sem extrato, o proprietário vem do "LOCADOR" do recibo.
       proprietarios: unicos.length ? unicos.map((r) => r.proprietario) : recibo?.locador ? [recibo.locador] : [],
-      repasses: unicos.map((r) => ({ id: idRepasse(r), proprietario: r.proprietario, banco: r.banco, pagamento: r.pagamento, valor: r.pago, onde: local(r) })),
+      repasses: unicos.map((r) => ({ id: idRepasse(r), proprietario: r.proprietario, banco: r.banco, pagamento: r.pagamento, valor: r.pago, caucao: r.linhas.filter((l) => ehCaucao(l.historico)).reduce((n, l) => n + l.credito - l.debito, 0), onde: local(r) })),
       onde: [
         ...g.recibos.map((r) => ["Recibo", r] as const),
         ...g.repasses.map((r) => ["Extrato", r] as const),
