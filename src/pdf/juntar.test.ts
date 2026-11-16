@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs"; // build para Node
 import { juntarPdfs } from "./juntar";
 import { lerOrigens } from "./extrair";
+import { LIMITES } from "../../shared/contrato";
 
 async function pdfFicticio(...textos: string[]) {
   const doc = await PDFDocument.create();
@@ -44,8 +45,11 @@ describe("juntar PDFs", () => {
     expect(await textos(junto)).toEqual(["Extrato A1", "Extrato A2", "Extrato B1"]);
   });
 
-  it("recusa passar do limite de páginas", async () => {
-    const grande = await pdfFicticio(...Array.from({ length: 201 }, (_, i) => `p${i}`));
-    await expect(juntarPdfs([grande])).rejects.toThrow(/201 páginas/);
-  });
+  it("junta 400 extratos de uma página e recusa passar do limite de páginas", async () => {
+    const extratos = await Promise.all(Array.from({ length: 400 }, (_, i) => pdfFicticio(`Extrato ${i}`)));
+    expect((await PDFDocument.load(await juntarPdfs(extratos))).getPageCount()).toBe(400);
+    const n = LIMITES.paginasPorDocumento + 1;
+    const grande = await pdfFicticio(...Array.from({ length: n }, (_, i) => `p${i}`));
+    await expect(juntarPdfs([grande])).rejects.toThrow(new RegExp(`${n} páginas`));
+  }, 60_000);
 });

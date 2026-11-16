@@ -154,7 +154,7 @@ A rota de IA (`OPENAI_API_KEY`) continua no Worker, mas o app não a usa hoje. N
 | `scripts/` | `usuarios.ts` (gestão de acessos) |
 | `docs/` | Regras da conferência e guia de publicação |
 
-Limites por arquivo: 20 MB e 200 páginas.
+Limites por arquivo: 20 MB e 1.000 páginas (cabe um PDF juntado com ~400 extratos). Não há limite de quantidade de arquivos.
 
 ## Identidade visual
 
