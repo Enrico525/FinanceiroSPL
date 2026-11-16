@@ -66,6 +66,9 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
 ## Totais do relatório
 
 - Soma só os **repasses** (valor pago/a repassar de cada extrato), nunca os valores do recibo.
+- **Depósito caução** nunca entra no total: o valor da linha "Depósito Caução" do extrato é descontado da soma. O
+  extrato que é só caução fica fora da soma, da contagem de extratos e do quadro "sem banco"; o relatório mostra à
+  parte quantos são e quanto somam. A conferência do contrato continua igual.
 - Separada pela conta de onde sai a transferência: repasse para **Bradesco** sai do Bradesco; para **qualquer outro
   banco** (Itaú, Banco do Brasil, Inter, Santander…) sai do **Itaú**.
 - Extrato **sem banco**: fica em linha à parte, destacada, até a pessoa escolher no relatório "Somar no Itaú" ou
