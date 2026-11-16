@@ -47,7 +47,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 
 - Validar com um par recibo × extrato do mesmo lote. Lote de 13/11/2026: leitura ok em todos os PDFs, mas os extratos
   cobriam só 2 de 47 contratos (14756 bateu inteiro; no 15215 a divergência do "Condomínio Prop" não repassado era
-  erro real, confirmado e corrigido pelo financeiro). Falta um lote com mais extratos.
+  erro real, confirmado e corrigido pelo financeiro). Lote de 16/11/2026: 42 extratos lidos, valores iguais ao
+  "Total Pendente" de cada página, e a soma do Itaú bateu com a soma manual do financeiro depois de tirar um extrato
+  e digitar 4 lançamentos manuais; as divergências desse lote ainda não foram revisadas com o financeiro.
 - Taxa de intermediação de 50% do aluguel (contrato 15215): válida ou a regra de 100% muda? Hoje vira conferência manual.
 - "Taxa Adm" aparecendo no **recibo** (ex.: contrato 7840): regra não definida.
 - Juros entram na base da taxa ADM? Ainda não apareceu caso real.
@@ -58,7 +60,7 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 
 ## Estrutura
 
-- `src/` frontend (`pdf/extrair.ts` leitura local, `nido/ler.ts` + `nido/conferir.ts` conferência, `api.ts`, `components/`)
+- `src/` frontend (`pdf/extrair.ts` leitura local, `pdf/juntar.ts` Juntar PDF, `nido/ler.ts` + `nido/conferir.ts` conferência e totais, `api.ts`, `components/` com resultado e relatório em `Resultado.tsx`)
 - `worker/` API (`auth.ts` sessão + lista, `login.ts` nome/senha, `sessao.ts` cookies assinados, `openai.ts`, `index.ts` rotas/validação/rate limit)
 - `shared/` contrato e limites
 

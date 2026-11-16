@@ -4,8 +4,10 @@
 Navegador (React)
   ├─ Tela de login: nome + senha (sem sessão)
   ├─ PDF.js (worker servido pelo app) → texto por página
+  ├─ src/pdf/juntar.ts: junta extratos num PDF só (pdf-lib) e baixa o arquivo
   ├─ src/nido/ler.ts: lê Recibos do Locatário e Extratos de Repasse do NIDO
-  ├─ src/nido/conferir.ts: regras de conferência (docs/REGRAS-CONFERENCIA.md), sem IA
+  ├─ src/nido/conferir.ts: regras de conferência e totais por conta (docs/REGRAS-CONFERENCIA.md), sem IA
+  ├─ src/components/Resultado.tsx: resultado e relatório (por conta, dados bancários, lançamentos manuais)
   └─ Estado apenas em memória
         │ HTTPS · só login/sessão (a conferência não envia dados)
         ▼
@@ -45,8 +47,18 @@ Erros da API: `{ "erro": CodigoErro }` (ver `shared/contrato.ts`). O frontend tr
    nº de páginas e extrai texto.
 2. PDF sem texto (impresso via “Microsoft Print to PDF”) é recusado: o relatório precisa ser exportado do NIDO.
 3. `lerRecibos`/`lerRepasses` transformam o texto em registros; arquivo sem nenhum registro é recusado.
+   Do cabeçalho do extrato saem também os dados bancários do proprietário (CPF/CNPJ, forma, banco, agência, conta,
+   tipo e descrição).
 4. `conferir` casa recibo × extrato por contrato + vencimento e aplica as regras (valores em centavos).
-5. Os registros lidos são descartados; só o resultado fica na tela até "Nova conferência" ou saída da página.
+5. Os registros lidos ficam **só em memória** enquanto a conferência está na tela, para permitir adicionar ou trocar
+   extratos e excluir um extrato sem recomeçar (`conferirSem` refaz a conferência sem os excluídos).
+6. O relatório calcula os totais por conta de saída (`totais`), somando os lançamentos manuais digitados, e pode
+   ser filtrado por conta (Todos / Só Bradesco / Só Itaú). A impressão é feita pelo navegador (`window.print`).
+7. "Nova conferência", "Sair", recarregar ou fechar a página apagam registros, resultado, escolhas de conta e
+   lançamentos manuais.
+
+**Juntar PDF** (`src/pdf/juntar.ts`): copia as páginas originais dos extratos para um PDF novo, grava no próprio
+arquivo de qual PDF veio cada página e só **baixa** o resultado; o app lê esse PDF como qualquer outro.
 
 A rota `/api/analisar` (OpenAI) continua no Worker, mas o app não a usa mais.
 

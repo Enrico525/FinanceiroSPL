@@ -8,12 +8,16 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
 - Os dois relatórios devem ser **exportados direto do NIDO**. PDF gerado por “Imprimir → Microsoft Print to PDF”
   não tem texto e é recusado.
 - Pode enviar vários arquivos de cada lado. O mesmo recibo/extrato repetido em dois arquivos conta uma vez só.
-- Dois modos:
-  - **Conferência geral:** todos os recibos × todos os extratos de uma vez.
-  - **Extratos separados:** os recibos ficam carregados; envie um ou vários extratos (ex.: um PDF por contrato),
+- **Juntar PDF:** página que junta vários Extratos de Repasse num PDF só e baixa o arquivo. O PDF juntado é lido
+  como qualquer outro, e o app mostra de qual arquivo original veio cada página.
+- Dois modos de conferência:
+  - **Repasses juntados:** todos os recibos × todos os extratos de uma vez (ou o PDF juntado).
+  - **Repasses únicos:** os recibos ficam carregados; envie um ou vários extratos (ex.: um PDF por contrato),
     confira e envie os próximos. "Recibos sem extrato" não aparece (seria todo o resto). Repasse em dobro só é
     detectado entre os extratos da mesma conferência, porque nada é guardado entre conferências.
 - Extrato com "PAGAMENTO AGUARDANDO EFETIVAÇÃO" (repasse ainda não pago) é conferido igual ao já pago.
+- Depois de conferir, dá para **adicionar ou trocar extratos** e analisar de novo: um extrato com o mesmo número e
+  proprietário substitui o anterior (versão corrigida).
 
 ## Como os documentos são casados
 
@@ -56,7 +60,7 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
 - Créditos − débitos de cada extrato devem ser iguais ao valor pago ao proprietário.
 - **Grave:** mais de um repasse na mesma competência para o mesmo contrato e proprietário.
 - Recibo sem extrato, ou extrato sem recibo (fora Aluguel Garantido e Pré-cadastro), aparece em seção própria
-  ("Recibos sem extrato de repasse" / "Extratos sem recibo"), separada das divergências: pode ser só arquivo faltando.
+  ("Recibo sem extrato" / "Extrato sem recibo"), separada das divergências: pode ser só arquivo faltando.
   Mesmo contrato com vencimento diferente continua sendo divergência.
 
 ## Totais do relatório
