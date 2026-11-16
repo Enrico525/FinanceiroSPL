@@ -223,6 +223,13 @@ describe("conferência recibo × repasse", () => {
     expect(textos([RECIBO_NORMAL], [errada])[0]).toMatch(/Taxa ADM de R\$ 120,00; o esperado é R\$ 100,00/);
   });
 
+  it("taxa ADM no recibo vai para conferência manual", () => {
+    const r = recibo([...RECIBO_NORMAL.linhas.map((l) => [l.historico, l.debito, l.credito] as [string, number, number]), ["Taxa Adm", 5000, 0]]);
+    expect(textos([r], [REPASSE_NORMAL])).toEqual([
+      'manual: "Taxa Adm" (R$ 50,00) no recibo: só vale por acordo do contrato, conferir manualmente.',
+    ]);
+  });
+
   it("taxa de expediente repassada é divergência", () => {
     const p = repasse([...REPASSE_NORMAL.linhas.map((l) => [l.historico, l.bruto, l.credito > 0] as [string, number, boolean]), ["Taxa de Expediente", 750, true]]);
     expect(textos([RECIBO_NORMAL], [p])).toEqual(['divergencia: "Taxa de Expediente" (R$ 7,50) foi repassado, mas deveria ficar retido.']);

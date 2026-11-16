@@ -41,6 +41,10 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   extrato aparecem em cada contrato do relatório (tela e impressão), só como texto e só em memória.
 - Extrato excluído pela pessoa (11/2026): o contrato sai do resultado e do relatório, em vez de virar "recibo sem
   extrato" (`conferirSem`).
+- Taxa de intermediação (11/2026): o normal é 100% do aluguel, mas varia conforme o acordo (fora do PDF); diferente
+  de 100% continua indo para conferência manual.
+- Taxa Adm no recibo (11/2026): só é certa por acordo do contrato (ex.: 7840), então vira conferência manual.
+- Juros (11/2026): são cobrados só sobre o aluguel e entram na base da taxa ADM, junto com a multa.
 - Depósito caução (11/2026): a linha "Depósito Caução" do extrato nunca soma nos totais do relatório (`totais`);
   a conferência do contrato não muda.
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
@@ -52,9 +56,6 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   erro real, confirmado e corrigido pelo financeiro). Lote de 16/11/2026: 42 extratos lidos, valores iguais ao
   "Total Pendente" de cada página, e a soma do Itaú bateu com a soma manual do financeiro depois de tirar um extrato
   e digitar 4 lançamentos manuais; as divergências desse lote ainda não foram revisadas com o financeiro.
-- Taxa de intermediação de 50% do aluguel (contrato 15215): válida ou a regra de 100% muda? Hoje vira conferência manual.
-- "Taxa Adm" aparecendo no **recibo** (ex.: contrato 7840): regra não definida.
-- Juros entram na base da taxa ADM? Ainda não apareceu caso real.
 
 - Gerar a remessa de pagamento do Itaú (SISPAG CNAB 240) com os repasses que bateram 100% e estão "AGUARDANDO
   EFETIVAÇÃO": pausado a pedido do negócio. Faltam: tabela nome do banco → código, origem do "seu número", formas de
