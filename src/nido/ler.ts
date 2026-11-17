@@ -64,6 +64,7 @@ const DATA = String.raw`(\d{2}/\d{2}/\d{4})`;
 const RE_RECIBO_LINHA = new RegExp(String.raw`^(?:${DATA}   )?(.+?)   ${VALOR}   ${VALOR}$`);
 const RE_REPASSE_LINHA = new RegExp(String.raw`^${DATA}   (.+?)   ${VALOR}   ([\d,]+)%   ${VALOR}   ${VALOR}$`);
 // "PAGAMENTO EFETUADO" (já pago) ou "PAGAMENTO AGUARDANDO EFETIVAÇÃO" (extrato pronto, repasse ainda não pago).
+const RE_INICIO_LANCAMENTO = new RegExp(String.raw`^${DATA}   `);
 const PAGAMENTO = /^PAGAMENTO (EFETUADO|AGUARDANDO)/;
 // Extrato ainda não pago: o valor a repassar vem só no total, na coluna crédito ("0,00   1.088,87").
 const RE_PENDENTE = new RegExp(String.raw`^Total Pendente\b.*?   ${VALOR}   ${VALOR}$`);
@@ -163,8 +164,11 @@ export function lerRepasses(paginas: PaginaExtraida[], arquivo = ""): Repasse[] 
   let naDescricao = false;
   let atual: Repasse | null = null;
   const comPagamento = new Set<Repasse>();
+  // Histórico longo quebra em várias linhas e os valores vêm na última: junta até a linha fechar.
+  let quebrada = "";
   for (const { pagina, linha } of linhas(paginas)) {
     let m: RegExpMatchArray | null;
+    if (linha.startsWith("Total") || CONTRATO.test(linha)) quebrada = "";
     if ((m = linha.match(/^(.+?) - \(ID: \d+\)(?: ((?:CPF|CNPJ): [\d.\/-]+))?/))) {
       proprietario = m[1];
       banco = "";
@@ -218,7 +222,8 @@ export function lerRepasses(paginas: PaginaExtraida[], arquivo = ""): Repasse[] 
       // Extrato com a linha "PAGAMENTO AGUARDANDO…" também traz o Total Pendente com o mesmo valor: conta uma vez só.
       if (!comPagamento.has(atual)) atual.pago += centavos(m[2]) - centavos(m[1]);
     }
-    else if ((m = linha.match(RE_REPASSE_LINHA))) {
+    else if ((m = (quebrada ? `${quebrada}   ${linha}` : linha).match(RE_REPASSE_LINHA))) {
+      quebrada = "";
       const [, data, historico, bruto, part, deb, cred] = m;
       if (PAGAMENTO.test(historico)) {
         atual.pago += centavos(deb);
@@ -235,7 +240,8 @@ export function lerRepasses(paginas: PaginaExtraida[], arquivo = ""): Repasse[] 
           credito: centavos(cred),
         });
       }
-    } else if (!atual.situacao && !atual.inquilino) atual.situacao = endereco(atual, linha, "Situação:") ?? "";
+    } else if (quebrada || RE_INICIO_LANCAMENTO.test(linha)) quebrada = quebrada ? `${quebrada} ${linha}` : linha;
+    else if (!atual.situacao && !atual.inquilino) atual.situacao = endereco(atual, linha, "Situação:") ?? "";
   }
   return repasses;
 }
