@@ -85,7 +85,7 @@ const SECOES: { status: Caso["status"]; titulo: string; nota?: string; aberta?: 
   { status: "ok", titulo: "Sem divergência" },
 ];
 
-// Relatório completo da conferência atual: tudo o que bateu e tudo o que foi apontado. Não é guardado;
+// Relatório de repasses (para pagar): totais e uma tabela por conta de saída. Não é guardado;
 // para manter uma cópia, a pessoa imprime ou salva em PDF pelo navegador.
 type PropsRelatorio = {
   casos: Visto[];
@@ -139,6 +139,9 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
   const [buscaContrato, setBuscaContrato] = useState("");
   const [buscaValor, setBuscaValor] = useState("");
   const digitos = (s: string) => s.replace(/\D/g, "");
+  // Pesquisa das tabelas de pagamento: só esconde na tela; o que não bate continua na impressão.
+  const [buscaPagamento, setBuscaPagamento] = useState("");
+  const pagamentoAchado = (contrato: string) => contrato.includes(digitos(buscaPagamento));
   const achados = lista.flatMap((c) =>
     c.repasses.filter((r) => c.contrato.includes(digitos(buscaContrato)) && digitos(reais(r.valor)).includes(digitos(buscaValor))).map((r) => ({ c, r })),
   );
@@ -330,6 +333,13 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
           </div>
         )}
       </section>
+      <div className="soma-lista__busca nao-imprimir">
+        <label className="campo">
+          Pesquisar contrato nas tabelas abaixo
+          <input type="search" inputMode="numeric" value={buscaPagamento} onChange={(e) => setBuscaPagamento(e.target.value)} placeholder="Ex.: 15215" />
+        </label>
+      </div>
+      {!pagamentos.some(({ c }) => pagamentoAchado(c.contrato)) && <p className="caso__meta nao-imprimir">Nenhum contrato encontrado.</p>}
       {/* Pagamentos: um quadro por conta de saída, só com o necessário para pagar (a conferência fica na tela de resultado). */}
       {([CONTA_ITAU, CONTA_BRADESCO, ""] as const).map((conta) => {
         const linhas = pagamentos.filter((p) => p.conta === conta);
@@ -351,7 +361,7 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
               </thead>
               <tbody>
                 {linhas.map(({ c, r }) => (
-                  <tr key={r.id}>
+                  <tr key={r.id} className={pagamentoAchado(c.contrato) ? undefined : "oculto-na-tela"}>
                     <td>
                       <strong className="pagamentos__destaque">{c.contrato}</strong>
                       <span className="caso__meta">{c.competencia && `comp. ${c.competencia}`}</span>

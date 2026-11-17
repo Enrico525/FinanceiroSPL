@@ -61,6 +61,7 @@ Taxa ADM = (aluguel − abono + multa + juros) × percentual do extrato
 - Arredondada para o centavo mais próximo, como o NIDO. Qualquer centavo de diferença é divergência.
 - Taxa ADM ausente no extrato: divergência.
 - Percentual não encontrado no extrato: conferência manual.
+- Taxa ADM sem linha de aluguel (ex.: acordo, “Acordo ref. aos boletos Alugueis”): conferência manual.
 - **Não entram na base:** “Aluguel Gerador” e manutenção (ex.: “Manutenção Elevador”).
 - **Não diminui a base:** abono de benfeitoria (ex.: “Abono/ Benfeitoria 4/4”). A taxa vai sobre o aluguel cheio.
 - **Taxa Adm aparecendo no recibo** (cobrada do inquilino): só é certa por acordo do contrato (ex.: 7840), que não aparece no PDF. Vai para conferência manual.
@@ -103,6 +104,8 @@ Cada linha do recibo é procurada no extrato pelo **valor exato e pelo sentido**
 
 - Somam só o valor pago ou a repassar de cada extrato, nunca os valores do recibo.
 - **Depósito caução** nunca entra no total. Extrato só de caução fica fora da soma e aparece à parte.
+- Extrato de **R$ 0,00** fica fora da soma, da contagem e do quadro “sem banco” (não há o que pagar).
+- O mesmo extrato enviado em **duas versões diferentes** é divergência: troque pela versão certa.
 - Conta de saída: repasse para **Bradesco** sai do Bradesco; para **qualquer outro banco** sai do **Itaú**.
 - Extrato **sem banco** fica destacado até a pessoa escolher “Somar no Itaú” ou “Somar no Bradesco”.
 - **Lançamento manual** (repasse feito por fora do NIDO): digitado no relatório com a conta, só soma no total, sem conferência.

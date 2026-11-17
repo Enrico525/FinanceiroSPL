@@ -181,6 +181,14 @@ describe("conferência recibo × repasse", () => {
     expect(totais([], {}, [{ conta: "BRADESCO", valor: 1000 }]).bancos).toMatchObject([{ banco: "BRADESCO", valor: 1000, repasses: 0 }]);
   });
 
+  it("extrato de R$ 0,00 não soma, não conta e não pede conta", () => {
+    const casos = conferir([], [
+      repasse([["Aluguel", 100000, true]], { contrato: "1", numero: "1", banco: "ITAU" }),
+      repasse([["Aluguel", 100000, true], ["Abono Aluguel", 100000, false]], { contrato: "2", numero: "2", banco: "" }),
+    ]);
+    expect(totais(casos)).toMatchObject({ geral: 100000, repasses: 1, semBanco: [] });
+  });
+
   it("registra o que foi conferido para o relatório", () => {
     const [c] = conferir([RECIBO_NORMAL], [REPASSE_NORMAL]);
     expect(c.conferidos.map((t) => t.replace(/ /g, " "))).toEqual([
@@ -221,6 +229,15 @@ describe("conferência recibo × repasse", () => {
       ["Taxa ADM./Aluguel", 12000, false],
     ]);
     expect(textos([RECIBO_NORMAL], [errada])[0]).toMatch(/Taxa ADM de R\$ 120,00; o esperado é R\$ 100,00/);
+  });
+
+  it("taxa ADM sem linha de aluguel (acordo) vai para conferência manual", () => {
+    const acordo = repasse([["Acordo ref. aos boletos Alugueis 1/12", 167052, true], ["Taxa ADM./Aluguel - DOC: 1", 8353, false]], {
+      situacao: "Aluguel Garantido", // extrato sem recibo é normal: a conferência roda só com o extrato
+    });
+    expect(textos([], [acordo])).toContain(
+      "manual: Taxa ADM de R$ 83,53 sem linha de aluguel (ex.: acordo): conferir manualmente o valor.",
+    );
   });
 
   it("taxa ADM no recibo vai para conferência manual", () => {
@@ -313,6 +330,16 @@ describe("conferência recibo × repasse", () => {
     const copiaRecibo = { ...RECIBO_NORMAL, arquivo: "outro.pdf", pagina: 9 };
     const copiaRepasse = { ...REPASSE_NORMAL, arquivo: "outro.pdf", pagina: 9 };
     expect(textos([RECIBO_NORMAL, copiaRecibo], [REPASSE_NORMAL, copiaRepasse])).toEqual([]);
+  });
+
+  it("o mesmo extrato em duas versões diferentes é divergência, não some em silêncio", () => {
+    const corrigido = repasse(
+      [["Aluguel 03/12", 200000, true], ["IPTU 2026 10/10", 30000, true], ["Condomínio", 50000, true], ["Taxa ADM./Aluguel", 10000, false], ["Água", 1000, true]],
+      { arquivo: "corrigido.pdf" },
+    );
+    expect(textos([RECIBO_NORMAL], [REPASSE_NORMAL, corrigido]).filter((t) => t.startsWith("divergencia: Extrato"))).toEqual([
+      "divergencia: Extrato de repasse nº 1 (DONO) veio em duas versões diferentes. Use “Adicionar ou trocar extratos” com a versão certa.",
+    ]);
   });
 
   it("vários proprietários: tolera 1 centavo de arredondamento por proprietário", () => {

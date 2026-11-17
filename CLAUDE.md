@@ -50,6 +50,12 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Juros (11/2026): são cobrados só sobre o aluguel e entram na base da taxa ADM, junto com a multa.
 - Depósito caução (11/2026): a linha "Depósito Caução" do extrato nunca soma nos totais do relatório (`totais`);
   a conferência do contrato não muda.
+- Pesquisa de contrato nas tabelas de pagamento do relatório (11/2026): só esconde na tela (`oculto-na-tela`);
+  totais e impressão continuam com todos os contratos.
+- Extrato em duas versões (11/2026): mesmo número e proprietário com conteúdo diferente é divergência (antes o
+  primeiro ficava em silêncio); cópia idêntica continua contando uma vez.
+- Taxa ADM sem linha "Aluguel" (acordos, 11/2026): conferência manual, sem calcular a base.
+- Extrato de R$ 0,00 (11/2026): fora da soma, da contagem e do quadro "sem banco", como o só de caução.
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
 
 ## Pendências (aguardando o negócio)
@@ -59,6 +65,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   erro real, confirmado e corrigido pelo financeiro). Lote de 16/11/2026: 42 extratos lidos, valores iguais ao
   "Total Pendente" de cada página, e a soma do Itaú bateu com a soma manual do financeiro depois de tirar um extrato
   e digitar 4 lançamentos manuais; as divergências desse lote ainda não foram revisadas com o financeiro.
+  Lote de 17/11/2026: 192 páginas de extrato (191 extratos; o 14881 veio repetido), soma R$ 818.870,23 com o 7159
+  corrigido. A fita do financeiro (soma de telas do NIDO, 192 repasses) deu R$ 852.547,55, ~R$ 31,6 mil a mais:
+  diferença ainda sem explicação, falta a lista do NIDO com contrato e valor para comparar.
 
 - Juros de condomínio são repassados mas **não** entram na base da taxa ADM (hoje o código soma todos os juros):
   falta saber como a linha aparece no extrato e se a multa de condomínio segue a mesma regra. Perguntas para o
