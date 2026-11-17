@@ -120,6 +120,20 @@ describe("leitura NIDO", () => {
     expect(r).toMatchObject({ contrato: "100", pago: 243221, endereco: "R Exemplo Nº 1 - Und. 2, Bairro Cep: 00000-000 - São Paulo -SP" });
   });
 
+  it("histórico quebrado em várias linhas, com os valores na última", () => {
+    const texto = REPASSE.replace(
+      /^10\/11\/2026   Aluguel 03\/12.*$/m,
+      "10/11/2026   Acordo ref. aos boletos Alugueis- Ref. 02/08/2026 a\n01/10/2026 1/12 1/12\n2.581,07   100,00%   0,00   2.581,07",
+    );
+    const [r] = lerRepasses([{ numero: 1, texto }]);
+    expect(r.linhas).toHaveLength(2);
+    expect(r.linhas[0]).toMatchObject({
+      historico: "Acordo ref. aos boletos Alugueis- Ref. 02/08/2026 a 01/10/2026 1/12 1/12",
+      bruto: 258107,
+      credito: 258107,
+    });
+  });
+
   it("extrato ainda não pago: usa o crédito do Total Pendente", () => {
     const texto = REPASSE.replace(
       /^10\/11\/2026   PAGAMENTO EFETUADO[\s\S]*$/m,
