@@ -67,6 +67,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   mesmo número e proprietário de um lote anterior (`jaPagosAntes`) sai da soma e aparece em vermelho no topo até a
   pessoa liberar. Caso real: 14793 baixado de novo em 17/11 porque o lote de 16/11 ficou aberto no NIDO.
 - Extrato de R$ 0,00 (11/2026): fora da soma, da contagem e do quadro "sem banco", como o só de caução.
+- Linhas iguais no mesmo extrato (11/2026): dois lançamentos com o mesmo histórico e valor (ex.: dois "Condomínio")
+  são lançamentos distintos, não partes de proprietários diferentes (antes viravam divergência falsa).
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
 
 ## Pendências (aguardando o negócio)

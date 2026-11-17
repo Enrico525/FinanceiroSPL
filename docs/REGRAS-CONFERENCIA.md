@@ -20,6 +20,12 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
 - Extrato com "PAGAMENTO AGUARDANDO EFETIVAÇÃO" (repasse ainda não pago) é conferido igual ao já pago.
 - Depois de conferir, dá para **adicionar ou trocar extratos** e analisar de novo: um extrato com o mesmo número e
   proprietário substitui o anterior (versão corrigida).
+- **Dupla checagem da leitura:** ao ler um PDF de extratos, o app conta os extratos direto do texto (linha
+  "Total Pendente Contrato N") e **recusa o arquivo** se a contagem não bater com os extratos lidos. Um extrato
+  que ficasse sem ler sumiria da soma sem ninguém ver.
+- **Lotes anteriores já pagos (opcional):** a pessoa pode enviar os PDFs dos lotes já pagos. Extrato com o mesmo
+  número e proprietário de um lote anterior sai da soma e aparece em vermelho no topo, até a pessoa marcar "Não foi
+  pago: colocar na soma" (caso real: lote que ficou aberto no NIDO e foi baixado de novo).
 
 ## Como os documentos são casados
 
@@ -61,7 +67,10 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
 - **Vários proprietários**: com os extratos de todos os donos, as partes devem somar o total, com tolerância de
   1 centavo por proprietário (arredondamento do NIDO). Se só parte dos donos foi enviada, cada parte é conferida pelo
   percentual impresso, com tolerância de 0,005% do total + 1 centavo (o NIDO calcula 33,333…% e imprime 33,33%).
-- Créditos − débitos de cada extrato devem ser iguais ao valor pago ao proprietário.
+- Duas linhas iguais (mesmo histórico e valor) no mesmo extrato são dois lançamentos, não partes de dois
+  proprietários (ex.: dois "Condomínio" de R$ 500).
+- Créditos − débitos de cada extrato devem ser iguais ao valor pago ao proprietário. Quando não são, além da
+  divergência, o extrato aparece em vermelho no topo do resultado e do relatório (entra na soma com o valor do NIDO).
 - **Grave:** mais de um repasse na mesma competência para o mesmo contrato e proprietário.
 - Recibo sem extrato, ou extrato sem recibo (fora Aluguel Garantido e Pré-cadastro), aparece em seção própria
   ("Recibo sem extrato" / "Extrato sem recibo"), separada das divergências: pode ser só arquivo faltando.
@@ -79,6 +88,9 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
   banco** (Itaú, Banco do Brasil, Inter, Santander…) sai do **Itaú**.
 - Extrato **sem banco**: fica em linha à parte, destacada, até a pessoa escolher no relatório "Somar no Itaú" ou
   "Somar no Bradesco" para cada repasse. A escolha vale só para aquela conferência (nada é guardado).
+- **Troca de conta à mão:** na tabela de pagamentos, qualquer repasse (mesmo com banco no extrato) pode ser mudado
+  com "Pagar pelo Itaú/Bradesco" (ex.: contrato dividido, uma metade em cada banco). A impressão mostra "Conta
+  trocada à mão". Vale só para aquela conferência.
 - **Relatório por conta**: no topo do relatório dá para escolher "Todos", "Só Bradesco" ou "Só Itaú". Com uma conta
   escolhida, totais, lançamentos manuais, contratos e impressão mostram só os repasses daquela conta. Repasse sem
   banco e sem conta escolhida, e recibo sem extrato, só aparecem em "Todos". Os botões "Salvar só do Itaú" e

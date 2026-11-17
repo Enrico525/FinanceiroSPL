@@ -229,6 +229,23 @@ describe("conferência recibo × repasse", () => {
     ]);
   });
 
+  it("duas linhas iguais no mesmo extrato são dois lançamentos, não duas partes", () => {
+    const r = recibo([
+      ["Aluguel", 100000, 0],
+      ["Aluguel", 100000, 0],
+      ["Condomínio", 50000, 0],
+      ["Condomínio", 50000, 0],
+    ]);
+    const p = repasse([
+      ["Aluguel", 100000, true],
+      ["Aluguel", 100000, true],
+      ["Condomínio", 50000, true],
+      ["Condomínio", 50000, true],
+      ["Taxa ADM./Aluguel", 10000, false],
+    ]);
+    expect(textos([r], [p])).toEqual([]);
+  });
+
   it("aponta taxa ADM ausente ou com valor errado", () => {
     const sem = repasse([["Aluguel 03/12", 200000, true], ["IPTU 2026 10/10", 30000, true], ["Condomínio", 50000, true]]);
     expect(textos([RECIBO_NORMAL], [sem])).toEqual(["divergencia: Taxa ADM não descontada."]);

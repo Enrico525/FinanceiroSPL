@@ -27,6 +27,10 @@ Os PDFs são lidos e conferidos **no navegador**, com regras fixas e sem IA: nad
 - “Conferi manualmente: marcar como certo” tira o contrato da lista de pendências; dá para desfazer.
 - Depois de conferir, dá para **adicionar ou trocar extratos** (a versão corrigida substitui a anterior) e
   **remover um extrato** da análise, sem recomeçar.
+- **Dupla checagem:** o PDF de extratos é recusado se a contagem de extratos no texto não bater com a leitura, e
+  extrato com valor diferente da soma das suas linhas aparece em vermelho no topo.
+- **Lotes anteriores já pagos** (opcional): extrato que já veio num lote pago sai da soma e aparece em vermelho no
+  topo até você confirmar que ainda deve ser pago.
 
 **Relatório**
 
@@ -40,6 +44,8 @@ Os PDFs são lidos e conferidos **no navegador**, com regras fixas e sem IA: nad
 - **Dados bancários** de cada proprietário, como estão no extrato: CPF/CNPJ, forma de pagamento, banco, agência,
   conta, tipo de conta e observação do cadastro (costuma indicar o titular da conta).
 - **Extrato sem banco:** fica destacado até você escolher em qual conta somar.
+- **Trocar a conta à mão:** “Pagar pelo Itaú/Bradesco” na tabela muda a conta de qualquer repasse; a impressão
+  mostra “Conta trocada à mão”.
 - **Lançamentos manuais:** valores de repasses feitos por fora do NIDO (sem extrato) podem ser digitados e somam
   no total da conta escolhida. Só somam; não são conferidos.
 - **Remover extrato:** botão em cada contrato, no quadro “sem banco” e numa lista com pesquisa por número do

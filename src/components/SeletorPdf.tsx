@@ -11,12 +11,11 @@ type Props = {
   /** Nome do registro no plural, para o resumo ("recibos", "extratos"). */
   plural: string;
   arquivos: ArquivoLido<unknown>[];
-  desabilitado: boolean;
   aoSelecionar: (arquivos: File[]) => void;
   aoRemover: (id: number) => void;
 };
 
-export function SeletorPdf({ rotulo, plural, arquivos, desabilitado, aoSelecionar, aoRemover }: Props) {
+export function SeletorPdf({ rotulo, plural, arquivos, aoSelecionar, aoRemover }: Props) {
   const id = useId();
   const [arrastando, setArrastando] = useState(false);
   const receber = (lista: FileList | null) => lista?.length && aoSelecionar([...lista]);
@@ -40,7 +39,7 @@ export function SeletorPdf({ rotulo, plural, arquivos, desabilitado, aoSeleciona
             </span>
           )}{" "}
           {a.estado !== "lendo" && (
-            <button type="button" className="botao botao--texto" onClick={() => aoRemover(a.id)} disabled={desabilitado}>
+            <button type="button" className="botao botao--texto" onClick={() => aoRemover(a.id)}>
               Remover
             </button>
           )}
@@ -54,13 +53,13 @@ export function SeletorPdf({ rotulo, plural, arquivos, desabilitado, aoSeleciona
       className={`seletor ${arrastando ? "seletor--arrastando" : ""} seletor--${estado}`}
       onDragOver={(e) => {
         e.preventDefault();
-        if (!desabilitado) setArrastando(true);
+        setArrastando(true);
       }}
       onDragLeave={() => setArrastando(false)}
       onDrop={(e) => {
         e.preventDefault();
         setArrastando(false);
-        if (!desabilitado) receber(e.dataTransfer.files);
+        receber(e.dataTransfer.files);
       }}
       aria-labelledby={`${id}-titulo`}
     >
@@ -88,7 +87,6 @@ export function SeletorPdf({ rotulo, plural, arquivos, desabilitado, aoSeleciona
         type="file"
         multiple
         accept="application/pdf,.pdf"
-        disabled={desabilitado}
         onChange={(e) => {
           receber(e.target.files);
           e.target.value = ""; // permite escolher o mesmo arquivo de novo depois de removê-lo
