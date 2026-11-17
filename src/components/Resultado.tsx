@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
-import { CONTA_BRADESCO, CONTA_ITAU, chaveRepasse, contaDeSaida, reais, totais, type Caso, type Conta, type Manual } from "../nido/conferir";
+import { CONTA_BRADESCO, CONTA_ITAU, chaveRepasse, contaDeSaida, contaDoRepasse, reais, totais, type Caso, type Conta, type JaPago, type Manual } from "../nido/conferir";
 import { valorDigitado } from "../nido/ler";
 import type { Modo } from "../App";
 
@@ -112,7 +112,7 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
     ? todos
         .map((c) => ({
           ...c,
-          repasses: c.repasses.filter((r) => (r.banco ? contaDeSaida(r.banco) : escolhas[chaveRepasse(c.contrato, r.proprietario)]) === filtro),
+          repasses: c.repasses.filter((r) => contaDoRepasse(c.contrato, r, escolhas) === filtro),
         }))
         .filter((c) => c.repasses.length)
     : todos;
@@ -132,7 +132,7 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
   };
   const faltam = t.semBanco.filter((r) => !r.conta).length;
   const pagamentos = lista
-    .flatMap((c) => c.repasses.map((r) => ({ c, r, conta: r.banco ? contaDeSaida(r.banco) : (escolhas[chaveRepasse(c.contrato, r.proprietario)] ?? "") })))
+    .flatMap((c) => c.repasses.map((r) => ({ c, r, conta: contaDoRepasse(c.contrato, r, escolhas) })))
     .filter(({ r }) => r.valor - r.caucao !== 0) // extrato só de caução não é pago; aparece no total à parte
     .sort((a, b) => Number(a.c.contrato) - Number(b.c.contrato));
   // Pesquisa da lista de excluir: só os dígitos contam, então "1.234,56" e "123456" acham o mesmo valor.
@@ -360,7 +360,7 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
                 </tr>
               </thead>
               <tbody>
-                {linhas.map(({ c, r }) => (
+                {linhas.map(({ c, r, conta: atual }) => (
                   <tr key={r.id} className={pagamentoAchado(c.contrato) ? undefined : "oculto-na-tela"}>
                     <td>
                       <strong className="pagamentos__destaque">{c.contrato}</strong>
@@ -382,6 +382,16 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
                           </strong>
                           {(r.pagamento.forma || r.pagamento.descricao) && (
                             <span className="caso__meta">{[r.pagamento.forma, r.pagamento.descricao].filter(Boolean).join(" · ")}</span>
+                          )}
+                          {atual !== contaDeSaida(r.banco) && <span className="selo selo--manual">Conta trocada à mão</span>}
+                          {atual && (
+                            <button
+                              type="button"
+                              className="botao botao--texto nao-imprimir"
+                              onClick={() => aoEscolher(chaveRepasse(c.contrato, r.proprietario), atual === CONTA_ITAU ? CONTA_BRADESCO : CONTA_ITAU)}
+                            >
+                              Pagar pelo {NOME_CONTA[atual === CONTA_ITAU ? CONTA_BRADESCO : CONTA_ITAU]}
+                            </button>
                           )}
                         </>
                       ) : (
@@ -406,15 +416,67 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
   );
 }
 
+// Topo em vermelho, na tela e na impressão: o que não deveria entrar na soma como está.
+function Barrados({ casos, jaPagos, aoLiberar }: { casos: Caso[]; jaPagos: (JaPago & { liberado: boolean })[]; aoLiberar: (id: string, sim: boolean) => void }) {
+  // Valor do extrato diferente da soma das suas linhas: o total do NIDO ou a leitura está errada.
+  const errados = casos.flatMap((c) => c.repasses.filter((r) => r.valor !== r.liquido).map((r) => ({ c, r })));
+  if (!jaPagos.length && !errados.length) return null;
+  return (
+    <section className="barrados" role="alert">
+      {jaPagos.length > 0 && (
+        <>
+          <h2>Já pagos em lote anterior: {jaPagos.filter((j) => !j.liberado).length} fora da soma</h2>
+          <p>Estes extratos já vieram num lote anterior. Provavelmente o lote ficou aberto no NIDO e eles foram baixados de novo.</p>
+          <ul>
+            {jaPagos.map((j) => (
+              <li key={j.id}>
+                <span>
+                  <strong className="barrados__contrato">Contrato {j.contrato}</strong> · {j.proprietario} · extrato nº {j.numero} ·{" "}
+                  <strong>{reais(j.valor)}</strong>
+                  {j.valorAntes !== j.valor && ` (no lote anterior: ${reais(j.valorAntes)})`}
+                  <span className="caso__meta"> · Agora: {j.onde} · Antes: {j.ondeAntes}</span>
+                </span>
+                <strong>{j.liberado ? "ENTRA NA SOMA (liberado à mão)" : "FORA DA SOMA"}</strong>
+                <button type="button" className="botao botao--pequeno nao-imprimir" onClick={() => aoLiberar(j.id, !j.liberado)}>
+                  {j.liberado ? "Tirar da soma de novo" : "Não foi pago: colocar na soma"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {errados.length > 0 && (
+        <>
+          <h2>Valor do extrato diferente da soma das linhas: {errados.length}</h2>
+          <p>Estão na soma com o valor do NIDO, mas a conta das linhas dá outro valor. Confira no PDF antes de pagar.</p>
+          <ul>
+            {errados.map(({ c, r }) => (
+              <li key={r.id}>
+                <span>
+                  <strong className="barrados__contrato">Contrato {c.contrato}</strong> · {r.proprietario} · NIDO: <strong>{reais(r.valor)}</strong> · linhas:{" "}
+                  <strong>{reais(r.liquido)}</strong>
+                  <span className="caso__meta"> · {r.onde}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
 type PropsResultado = {
   casos: Caso[];
   modo: Modo;
+  jaPagos: (JaPago & { liberado: boolean })[];
+  aoLiberar: (id: string, sim: boolean) => void;
   removidos: number;
   aoRemoverRepasse: (id: string) => void;
   aoRestaurar: () => void;
 };
 
-export function Resultado({ casos: originais, modo, removidos, aoRemoverRepasse, aoRestaurar }: PropsResultado) {
+export function Resultado({ casos: originais, modo, jaPagos, aoLiberar, removidos, aoRemoverRepasse, aoRestaurar }: PropsResultado) {
   const [relatorio, setRelatorio] = useState(false);
   // Some ao começar outra conferência: nada é guardado.
   const [aceitos, setAceitos] = useState<Set<string>>(new Set());
@@ -433,8 +495,11 @@ export function Resultado({ casos: originais, modo, removidos, aoRemoverRepasse,
   const secoes = modo === "um" ? SECOES.filter((s) => s.status !== "sem_extrato") : SECOES;
   const de = (s: Caso["status"]) => casos.filter((c) => c.status === s);
 
+  const barrados = <Barrados casos={originais} jaPagos={jaPagos} aoLiberar={aoLiberar} />;
   if (relatorio)
     return (
+      <>
+      {barrados}
       <Relatorio
         casos={casos}
         secoes={secoes}
@@ -447,10 +512,12 @@ export function Resultado({ casos: originais, modo, removidos, aoRemoverRepasse,
         manuais={manuais}
         aoMudarManuais={setManuais}
       />
+      </>
     );
 
   return (
     <div className="resultado">
+      {barrados}
       <button type="button" className="botao botao--secundario botao--relatorio" onClick={() => setRelatorio(true)}>
         Ver relatório de repasses
       </button>

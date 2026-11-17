@@ -14,7 +14,7 @@ export type Caso = {
    * Um por extrato (proprietário): banco do repasse ("" = não informado) e valor pago/a repassar, em centavos.
    * `caucao`: parte desse valor que é "Depósito Caução" (não entra nos totais do relatório).
    */
-  repasses: { id: string; proprietario: string; banco: string; pagamento: Pagamento; valor: number; caucao: number; onde: string }[];
+  repasses: { id: string; proprietario: string; banco: string; pagamento: Pagamento; valor: number; caucao: number; /** Soma das linhas do extrato (crédito − débito): tem que ser igual a `valor`. */ liquido: number; onde: string }[];
   /** Onde achar no PDF: "Extrato: arquivo.pdf, pág. 3". */
   onde: string[];
   /** sem_extrato / sem_recibo: o outro lado não está nos arquivos enviados. */
@@ -243,10 +243,14 @@ export const CONTA_ITAU = "ITAÚ";
 export type Conta = typeof CONTA_BRADESCO | typeof CONTA_ITAU;
 export const contaDeSaida = (banco: string) => (!banco ? "" : simples(banco).includes("bradesco") ? CONTA_BRADESCO : CONTA_ITAU);
 export const chaveRepasse = (contrato: string, proprietario: string) => `${contrato}|${proprietario}`;
+/** Conta escolhida na tela (troca à mão, vale até para extrato com banco) ou, sem escolha, a regra pelo banco. */
+export const contaDoRepasse = (contrato: string, r: { proprietario: string; banco: string }, escolhas: Record<string, Conta>) =>
+  escolhas[chaveRepasse(contrato, r.proprietario)] ?? contaDeSaida(r.banco);
 
 /**
  * Soma dos repasses (valor pago/a repassar), no geral e por conta de saída (maior primeiro).
- * Repasse sem banco no extrato fica em "" até a pessoa escolher a conta em `escolhas` (chave: chaveRepasse).
+ * Repasse sem banco no extrato fica em "" até a pessoa escolher a conta em `escolhas` (chave: chaveRepasse);
+ * com banco, a escolha troca a conta da regra (ex.: banco Bradesco pago pelo Itaú, acordo fora do PDF).
  * `manuais`: repasses feitos por fora do NIDO (sem extrato), digitados no relatório; só somam, não são conferidos.
  */
 export type Manual = { conta: Conta; valor: number };
@@ -266,9 +270,8 @@ export function totais(casos: Caso[], escolhas: Record<string, Conta> = {}, manu
       }
       if (!valor) continue; // extrato só de caução ou de R$ 0,00: nada a pagar, fica fora da soma, da contagem e do quadro "sem banco"
       const chave = chaveRepasse(c.contrato, r.proprietario);
-      const escolhida = r.banco ? null : (escolhas[chave] ?? null);
-      if (!r.banco) semBanco.push({ id: r.id, chave, contrato: c.contrato, proprietario: r.proprietario, valor, onde: r.onde, conta: escolhida });
-      const conta = escolhida ?? contaDeSaida(r.banco);
+      if (!r.banco) semBanco.push({ id: r.id, chave, contrato: c.contrato, proprietario: r.proprietario, valor, onde: r.onde, conta: escolhas[chave] ?? null });
+      const conta = contaDoRepasse(c.contrato, r, escolhas);
       const nome = r.banco || "sem banco (escolhido)";
       const t = porConta.get(conta) ?? { valor: 0, repasses: 0, bancos: [] };
       porConta.set(conta, {
@@ -288,6 +291,21 @@ export function totais(casos: Caso[], escolhas: Record<string, Conta> = {}, manu
 
 /** Identifica um extrato de repasse: o mesmo número e proprietário é o mesmo extrato (cópia ou versão corrigida). */
 export const idRepasse = (r: Repasse) => `${r.numero}|${r.proprietario}`;
+
+/**
+ * Extrato que já veio num lote anterior já pago (mesmo número e proprietário, valor igual ou não): o NIDO pode
+ * mostrar de novo um repasse já pago quando o lote fica aberto (14793, 17/11/2026). Fica fora da soma até a pessoa liberar.
+ */
+export type JaPago = { id: string; contrato: string; proprietario: string; numero: string; valor: number; onde: string; valorAntes: number; ondeAntes: string };
+export function jaPagosAntes(repasses: Repasse[], anteriores: Repasse[]): JaPago[] {
+  const antes = new Map(anteriores.filter((r) => r.numero).map((r) => [idRepasse(r), r]));
+  return repasses
+    .filter((r, i, a) => antes.has(idRepasse(r)) && a.findIndex((x) => idRepasse(x) === idRepasse(r)) === i)
+    .map((r) => {
+      const a = antes.get(idRepasse(r))!;
+      return { id: idRepasse(r), contrato: r.contrato, proprietario: r.proprietario, numero: r.numero, valor: r.pago, onde: local(r), valorAntes: a.pago, ondeAntes: local(a) };
+    });
+}
 
 /** "arquivo.pdf, pág. 3", e no PDF juntado também o arquivo original. */
 const local = (r: Recibo | Repasse) =>
@@ -374,7 +392,7 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
       inquilino: recibo?.locatario || r0?.inquilino || "",
       // Sem extrato, o proprietário vem do "LOCADOR" do recibo.
       proprietarios: unicos.length ? unicos.map((r) => r.proprietario) : recibo?.locador ? [recibo.locador] : [],
-      repasses: unicos.map((r) => ({ id: idRepasse(r), proprietario: r.proprietario, banco: r.banco, pagamento: r.pagamento, valor: r.pago, caucao: r.linhas.filter((l) => ehCaucao(l.historico)).reduce((n, l) => n + l.credito - l.debito, 0), onde: local(r) })),
+      repasses: unicos.map((r) => ({ id: idRepasse(r), proprietario: r.proprietario, banco: r.banco, pagamento: r.pagamento, valor: r.pago, caucao: r.linhas.filter((l) => ehCaucao(l.historico)).reduce((n, l) => n + l.credito - l.debito, 0), liquido: r.linhas.reduce((n, l) => n + l.credito - l.debito, 0), onde: local(r) })),
       onde: [
         ...g.recibos.map((r) => ["Recibo", r] as const),
         ...g.repasses.map((r) => ["Extrato", r] as const),

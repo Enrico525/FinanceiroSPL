@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { buscarUsuario, ErroApi, sair } from "./api";
 import { lerPdf, ErroLeitura } from "./pdf/extrair";
 import { juntarPdfs } from "./pdf/juntar";
-import { lerRecibos, lerRepasses, type Recibo, type Repasse } from "./nido/ler";
-import { conferirSem, idRepasse } from "./nido/conferir";
+import { extratosNaoLidos, lerRecibos, lerRepasses, type Recibo, type Repasse } from "./nido/ler";
+import { conferirSem, idRepasse, jaPagosAntes } from "./nido/conferir";
 import { SeletorPdf, type ArquivoLido } from "./components/SeletorPdf";
 import { Resultado } from "./components/Resultado";
 import { Login } from "./components/Login";
 
-type Lado = "recibos" | "repasses";
+type Lado = "recibos" | "repasses" | "anteriores";
 /** geral: todos os extratos de uma vez. um: um extrato por vez, mantendo os recibos carregados. */
 export type Modo = "geral" | "um";
 type Pagina = Modo | "juntar";
@@ -17,12 +17,14 @@ const PAGINAS: { id: Pagina; nome: string; descricao: string }[] = [
   { id: "um", nome: "Repasses únicos", descricao: "Recibos ficam carregados; confira um ou vários extratos por vez" },
   { id: "geral", nome: "Repasses juntados", descricao: "Todos os recibos × todos os extratos (ou o PDF juntado)" },
 ];
-type Arquivos = { recibos: ArquivoLido<Recibo>[]; repasses: ArquivoLido<Repasse>[] };
-const VAZIO: Arquivos = { recibos: [], repasses: [] };
+type Arquivos = { recibos: ArquivoLido<Recibo>[]; repasses: ArquivoLido<Repasse>[]; anteriores: ArquivoLido<Repasse>[] };
+const VAZIO: Arquivos = { recibos: [], repasses: [], anteriores: [] };
 
 const LADOS = {
   recibos: { rotulo: "Recibos do Locatário", plural: "recibos", titulo: "Recibo do Locatário", ler: lerRecibos },
   repasses: { rotulo: "Extratos de Repasse", plural: "extratos", titulo: "Extrato de Repasse", ler: lerRepasses },
+  // Extratos de lotes já pagos: só para achar repasse que voltou num lote novo (não entram na conferência).
+  anteriores: { rotulo: "Lotes anteriores já pagos (opcional)", plural: "extratos", titulo: "Extrato de Repasse", ler: lerRepasses },
 } as const;
 
 export function App() {
@@ -33,11 +35,14 @@ export function App() {
   const [naoLogado, setNaoLogado] = useState(false);
   const [arquivos, setArquivos] = useState<Arquivos>(VAZIO);
   // Dados lidos da conferência em tela (só em memória): permitem remover ou adicionar extratos e analisar de novo.
-  const [base, setBase] = useState<{ recibos: Recibo[]; repasses: Repasse[] } | null>(null);
+  const [base, setBase] = useState<{ recibos: Recibo[]; repasses: Repasse[]; anteriores: Repasse[] } | null>(null);
   const [removidos, setRemovidos] = useState<Set<string>>(new Set());
+  // Já pagos em lote anterior saem da soma sozinhos; `liberados` são os que a pessoa confirmou que ainda deve pagar.
+  const [liberados, setLiberados] = useState<Set<string>>(new Set());
+  const jaPagos = useMemo(() => (base ? jaPagosAntes(base.repasses, base.anteriores) : []), [base]);
   const casos = useMemo(
-    () => base && conferirSem(base.recibos, base.repasses, removidos),
-    [base, removidos],
+    () => base && conferirSem(base.recibos, base.repasses, new Set([...removidos, ...jaPagos.map((j) => j.id).filter((id) => !liberados.has(id))])),
+    [base, removidos, jaPagos, liberados],
   );
   const [pagina, setPagina] = useState<Pagina>("geral");
   const modo: Modo = pagina === "juntar" ? "geral" : pagina;
@@ -59,6 +64,7 @@ export function App() {
     setArquivos(VAZIO);
     setBase(null);
     setRemovidos(new Set());
+    setLiberados(new Set());
   };
 
   // Limpeza de melhor esforço ao sair da página.
@@ -89,6 +95,12 @@ export function App() {
           .map((r) => ({ ...r, origem: doc.paginas[r.pagina - 1]?.origem }));
         if (!registros.length)
           throw new ErroLeitura(`Nenhum “${LADOS[lado].titulo}” encontrado. Confira se este é o relatório certo do NIDO.`);
+        // Dupla checagem: um extrato que fica sem ler some da soma em silêncio, então o arquivo inteiro é recusado.
+        const faltam = lado === "recibos" ? "" : extratosNaoLidos(doc.paginas, registros as Repasse[]);
+        if (faltam)
+          throw new ErroLeitura(
+            `A contagem do PDF não bateu com a leitura: ${faltam}. A soma ficaria errada, por isso o arquivo foi recusado. Exporte de novo do NIDO ou mande cada extrato em um PDF.`,
+          );
         const ok = { id, nome, estado: "ok", paginas: doc.paginas.length, registros, arquivo } as ArquivoLido<Recibo>;
         atualizar(lado, id, ok);
       } catch (e) {
@@ -116,16 +128,17 @@ export function App() {
   };
 
   const lidos = <T,>(lista: ArquivoLido<T>[]) => lista.flatMap((a) => (a.estado === "ok" ? a.registros : []));
-  const todos = [...arquivos.recibos, ...arquivos.repasses];
+  const todos = [...arquivos.recibos, ...arquivos.repasses, ...arquivos.anteriores];
   const prontos =
     !todos.some((a) => a.estado !== "ok") && lidos(arquivos.recibos).length > 0 && lidos(arquivos.repasses).length > 0;
 
   const iniciar = () => {
-    setBase({ recibos: lidos(arquivos.recibos), repasses: lidos(arquivos.repasses) });
+    setBase({ recibos: lidos(arquivos.recibos), repasses: lidos(arquivos.repasses), anteriores: lidos(arquivos.anteriores) });
     setRemovidos(new Set());
+    setLiberados(new Set());
     // A lista de arquivos é esvaziada; os dados lidos ficam em `base` enquanto o resultado está na tela.
     // No modo "um", os recibos ficam carregados para o próximo extrato.
-    setArquivos(modo === "um" ? { recibos: arquivos.recibos, repasses: [] } : VAZIO);
+    setArquivos(modo === "um" ? { ...arquivos, repasses: [] } : VAZIO);
   };
 
   // Extratos adicionados com o resultado na tela: o extrato com o mesmo número e proprietário é substituído
@@ -264,7 +277,7 @@ export function App() {
 
                   {!casos && (
                     <div className="seletores">
-                      {(["recibos", "repasses"] as const).map((lado) => (
+                      {(["recibos", "repasses", "anteriores"] as const).map((lado) => (
                         <SeletorPdf
                           key={lado}
                           rotulo={LADOS[lado].rotulo}
@@ -324,6 +337,8 @@ export function App() {
                       casos={casos}
                       modo={modo}
                       removidos={removidos.size}
+                      jaPagos={jaPagos.map((j) => ({ ...j, liberado: liberados.has(j.id) }))}
+                      aoLiberar={(id, sim) => setLiberados((s) => { const n = new Set(s); if (sim) n.add(id); else n.delete(id); return n; })}
                       aoRemoverRepasse={(id) => setRemovidos((s) => new Set(s).add(id))}
                       aoRestaurar={() => setRemovidos(new Set())}
                     />

@@ -245,3 +245,18 @@ export function lerRepasses(paginas: PaginaExtraida[], arquivo = ""): Repasse[] 
   }
   return repasses;
 }
+
+/**
+ * Dupla checagem da leitura, por outro caminho que não o leitor: conta os extratos direto do texto pela linha
+ * "Total Pendente Contrato N" (o NIDO a repete na mesma linha, por isso conta uma vez por linha) e compara com os
+ * extratos lidos. Devolve os contratos que sobram ou faltam ("" quando bate).
+ */
+export function extratosNaoLidos(paginas: PaginaExtraida[], repasses: { contrato: string }[]): string {
+  const saldo = new Map<string, number>();
+  for (const p of paginas)
+    for (const l of p.texto.split("\n"))
+      for (const c of new Set([...l.matchAll(/Total Pendente Contrato (\d+)/g)].map((m) => m[1]))) saldo.set(c, (saldo.get(c) ?? 0) + 1);
+  for (const r of repasses) saldo.set(r.contrato, (saldo.get(r.contrato) ?? 0) - 1);
+  const dif = [...saldo].filter(([, n]) => n);
+  return dif.map(([c, n]) => (n > 0 ? `contrato ${c} (${n} não lido${n > 1 ? "s" : ""})` : `contrato ${c} (${-n} lido${n < -1 ? "s" : ""} a mais)`)).join(", ");
+}
