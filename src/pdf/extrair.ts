@@ -1,4 +1,4 @@
-// Leitura local de PDFs. O arquivo nunca sai do navegador; só o texto extraído é enviado.
+// Leitura local de PDFs. O arquivo e o texto extraído nunca saem do navegador.
 import * as pdfjs from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { LIMITES } from "../../shared/contrato";
@@ -30,7 +30,7 @@ export type DocumentoLido = {
   nome: string;
   tamanho: number;
   paginas: PaginaExtraida[];
-  /** Pouco texto extraível: provavelmente digitalizado (OCR ainda não implementado). */
+  /** Pouco texto extraível: provavelmente digitalizado ou "Imprimir → PDF" (é recusado; OCR não é necessário). */
   possivelmenteDigitalizado: boolean;
 };
 

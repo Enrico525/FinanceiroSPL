@@ -94,12 +94,18 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
 
   // Junta os lançamentos de todos os proprietários (um item pode ir 100% para um só deles) e confere
   // se as partes somam o bruto. O NIDO arredonda cada parte: tolera 1 centavo por proprietário.
+  // A 2ª linha igual do mesmo extrato (ex.: dois "Condomínio" de R$ 500) é outro lançamento, não outra parte.
   const porLinha = new Map<string, LinhaRepasse[]>();
-  for (const r of repasses)
+  for (const r of repasses) {
+    const vezes = new Map<string, number>();
     for (const l of r.linhas) {
-      const k = `${l.historico}|${l.bruto}|${l.debito > 0}`;
+      const base = `${l.historico}|${l.bruto}|${l.debito > 0}`;
+      const n = (vezes.get(base) ?? 0) + 1;
+      vezes.set(base, n);
+      const k = `${base}|${n}`;
       porLinha.set(k, [...(porLinha.get(k) ?? []), l]);
     }
+  }
   const linhas = [...porLinha.values()].map((partes) => partes[0]);
   for (const l of linhas)
     if (ehDiferenca(l.historico))

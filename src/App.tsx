@@ -244,7 +244,6 @@ export function App() {
                       rotulo={LADOS.repasses.rotulo}
                       plural={LADOS.repasses.plural}
                       arquivos={arquivos.repasses}
-                      desabilitado={false}
                       aoSelecionar={(f) => adicionar("repasses", f)}
                       aoRemover={(id) => remover("repasses", id)}
                     />
@@ -283,7 +282,6 @@ export function App() {
                           rotulo={LADOS[lado].rotulo}
                           plural={LADOS[lado].plural}
                           arquivos={arquivos[lado]}
-                          desabilitado={false}
                           aoSelecionar={(f) => adicionar(lado, f)}
                           aoRemover={(id) => remover(lado, id)}
                         />
@@ -318,7 +316,6 @@ export function App() {
                         rotulo="Adicionar ou trocar extratos"
                         plural={LADOS.repasses.plural}
                         arquivos={arquivos.repasses}
-                        desabilitado={false}
                         aoSelecionar={(f) => adicionar("repasses", f)}
                         aoRemover={(id) => remover("repasses", id)}
                       />

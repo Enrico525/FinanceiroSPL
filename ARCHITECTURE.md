@@ -48,12 +48,16 @@ Erros da API: `{ "erro": CodigoErro }` (ver `shared/contrato.ts`). O frontend tr
 2. PDF sem texto (impresso via “Microsoft Print to PDF”) é recusado: o relatório precisa ser exportado do NIDO.
 3. `lerRecibos`/`lerRepasses` transformam o texto em registros; arquivo sem nenhum registro é recusado.
    Do cabeçalho do extrato saem também os dados bancários do proprietário (CPF/CNPJ, forma, banco, agência, conta,
-   tipo e descrição).
+   tipo e descrição). Em PDF de extratos, `extratosNaoLidos` conta os extratos pelo texto ("Total Pendente
+   Contrato N") e o arquivo é recusado se não bater com o que foi lido.
 4. `conferir` casa recibo × extrato por contrato + vencimento e aplica as regras (valores em centavos).
 5. Os registros lidos ficam **só em memória** enquanto a conferência está na tela, para permitir adicionar ou trocar
-   extratos e excluir um extrato sem recomeçar (`conferirSem` refaz a conferência sem os excluídos).
+   extratos e excluir um extrato sem recomeçar (`conferirSem` refaz a conferência sem os excluídos). Extratos de
+   lotes anteriores já pagos (opcional) são comparados por número e proprietário (`jaPagosAntes`) e ficam fora da
+   soma até a pessoa liberar.
 6. O relatório calcula os totais por conta de saída (`totais`), somando os lançamentos manuais digitados, e pode
-   ser filtrado por conta (Todos / Só Bradesco / Só Itaú). A impressão é feita pelo navegador (`window.print`).
+   ser filtrado por conta (Todos / Só Bradesco / Só Itaú). A conta de cada repasse pode ser trocada à mão
+   (`contaDoRepasse`). A impressão é feita pelo navegador (`window.print`).
 7. "Nova conferência", "Sair", recarregar ou fechar a página apagam registros, resultado, escolhas de conta e
    lançamentos manuais.
 
@@ -64,14 +68,12 @@ A rota `/api/analisar` (OpenAI) continua no Worker, mas o app não a usa mais.
 
 ## Limites (provisórios, `shared/contrato.ts`)
 
-20 MB por arquivo · 1.000 páginas por documento · 400.000 caracteres no total · corpo até 4 MB.
+20 MB por arquivo · 1.000 páginas por documento. Só da rota `/api/analisar` (sem uso): 400.000 caracteres no
+total · corpo até 4 MB.
 
 ## Ambientes
 
 - **Desenvolvimento:** `npm run dev` + `.dev.vars` (login simulado só em localhost).
 - **Teste/produção:** `*.workers.dev` (sem domínio próprio: uso temporário), variáveis em `wrangler.jsonc`, segredos como Secret.
 
-## Ainda não implementado
-
-- Divisão de documentos grandes em várias etapas (coordenada pelo navegador, Worker sem estado).
-- OCR local.
+OCR não é necessário: PDF sem texto é recusado e a pessoa exporta o relatório direto do NIDO.
