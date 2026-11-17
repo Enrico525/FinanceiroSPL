@@ -218,3 +218,9 @@ input:focus-visible + .botao, label.botao:focus-within { outline: 3px solid var(
 .sem-banco__opcoes { display: flex; gap: 1rem; }
 .sem-banco__opcoes label { cursor: pointer; font-weight: 600; }
 .sem-banco__opcoes input { accent-color: var(--vinho); }
+/* Topo em vermelho: o que não deveria estar na soma como está. Sai também na impressão. */
+.barrados { border: 4px solid #b00020; background: #fdecee; color: #5a000f; border-radius: var(--raio); padding: 1rem; margin: 0 0 1rem; }
+.barrados h2 { color: #b00020; margin: 0 0 0.4rem; font-size: 1.2rem; }
+.barrados ul { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+.barrados li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.25rem 1rem; padding: 0.4rem 0; border-top: 1px solid #f3b6bf; }
+.barrados__contrato { background: #b00020; color: #fff; padding: 0 0.4rem; border-radius: 4px; }

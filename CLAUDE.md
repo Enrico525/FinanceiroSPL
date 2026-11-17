@@ -55,6 +55,17 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Extrato em duas versões (11/2026): mesmo número e proprietário com conteúdo diferente é divergência (antes o
   primeiro ficava em silêncio); cópia idêntica continua contando uma vez.
 - Taxa ADM sem linha "Aluguel" (acordos, 11/2026): conferência manual, sem calcular a base.
+- Troca de conta à mão (11/2026): na tabela de pagamentos, qualquer repasse (mesmo com banco no extrato) pode ser
+  mudado de conta ("Pagar pelo Itaú/Bradesco"); usa as mesmas `escolhas` do "sem banco" (`contaDoRepasse`), só em
+  memória, e a impressão mostra "Conta trocada à mão". (Criada para o 14481, que no fim estava certo: contrato
+  dividido, uma metade em cada banco.)
+- Dupla checagem da soma (11/2026): ao ler um PDF de extratos, o app conta os extratos direto do texto
+  ("Total Pendente Contrato N", `extratosNaoLidos`) e **recusa o arquivo** se não bater com o que foi lido (extrato
+  sem ler some da soma em silêncio; o `extrato-de-repasse-8.pdf` antigo cai nisso). No relatório, extrato com valor
+  diferente da soma das linhas aparece em vermelho no topo (bloco `Barrados`), mesmo sem recibo.
+- Lotes anteriores já pagos (11/2026): campo opcional com os PDFs dos lotes já pagos, só em memória. Extrato com o
+  mesmo número e proprietário de um lote anterior (`jaPagosAntes`) sai da soma e aparece em vermelho no topo até a
+  pessoa liberar. Caso real: 14793 baixado de novo em 17/11 porque o lote de 16/11 ficou aberto no NIDO.
 - Extrato de R$ 0,00 (11/2026): fora da soma, da contagem e do quadro "sem banco", como o só de caução.
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
 
@@ -68,6 +79,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   Lote de 17/11/2026: 192 páginas de extrato (191 extratos; o 14881 veio repetido), soma R$ 818.870,23 com o 7159
   corrigido. A fita do financeiro (soma de telas do NIDO, 192 repasses) deu R$ 852.547,55, ~R$ 31,6 mil a mais:
   diferença ainda sem explicação, falta a lista do NIDO com contrato e valor para comparar.
+  Soma manual do financeiro no mesmo lote: R$ 812.148,37 (Bradesco 291.486,89, Itaú 520.661,48). Fechou com o app
+  tirando o 14793 (R$ 6.721,86, confirmado pelo financeiro); o erro de banco era da soma manual (14481 Bradesco
+  somado no Itaú). Certo: Bradesco 301.576,14, Itaú 510.572,23.
 
 - Juros de condomínio são repassados mas **não** entram na base da taxa ADM (hoje o código soma todos os juros):
   falta saber como a linha aparece no extrato e se a multa de condomínio segue a mesma regra. Perguntas para o

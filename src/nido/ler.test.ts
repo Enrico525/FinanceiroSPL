@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { centavos, lerRecibos, lerRepasses, valorDigitado } from "./ler";
+import { centavos, extratosNaoLidos, lerRecibos, lerRepasses, valorDigitado } from "./ler";
 
 describe("valorDigitado", () => {
   it("aceita valor com ou sem ponto de milhar e centavos; recusa o resto", () => {
@@ -142,5 +142,17 @@ describe("leitura NIDO", () => {
     const [r] = lerRepasses([{ numero: 1, texto }]);
     expect(r.pago).toBe(243221);
     expect(r.linhas).toHaveLength(2);
+  });
+});
+
+describe("extratosNaoLidos (dupla checagem da leitura)", () => {
+  const marcador = (c: string) => `Total Pendente Contrato ${c} Total Pendente Contrato ${c}   0,00 0,00   10,00 10,00`;
+  it("bate quando cada marcador do texto virou um extrato lido", () => {
+    const paginas = [{ numero: 1, texto: marcador("1") }, { numero: 2, texto: `${marcador("1")}\n${marcador("2")}` }];
+    expect(extratosNaoLidos(paginas, [{ contrato: "1" }, { contrato: "1" }, { contrato: "2" }])).toBe("");
+  });
+  it("aponta extrato que ficou sem ler e o lido a mais", () => {
+    const paginas = [{ numero: 1, texto: `${marcador("1")}\n${marcador("2")}` }];
+    expect(extratosNaoLidos(paginas, [{ contrato: "1" }, { contrato: "3" }])).toBe("contrato 2 (1 não lido), contrato 3 (1 lido a mais)");
   });
 });

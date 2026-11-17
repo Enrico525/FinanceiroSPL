@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conferir, conferirSem, idRepasse, taxaAdmEsperada, totais } from "./conferir";
+import { conferir, conferirSem, idRepasse, jaPagosAntes, taxaAdmEsperada, totais } from "./conferir";
 import type { LinhaRepasse, Recibo, Repasse } from "./ler";
 
 const V = "05/11/2026";
@@ -165,6 +165,16 @@ describe("conferência recibo × repasse", () => {
         { banco: "ITAÚ", valor: 60000, repasses: 3 },
       ],
       semBanco: [{ chave: "6|DONO", conta: "BRADESCO" }],
+    });
+    // Conta trocada à mão num extrato com banco (Bradesco pago pelo Itaú): sai de uma conta e entra na outra.
+    expect(totais(casos, { "1|DONO": "ITAÚ" })).toMatchObject({
+      geral: 217000,
+      bancos: [
+        { banco: "ITAÚ", valor: 160000, repasses: 4 },
+        { banco: "BRADESCO", valor: 50000, repasses: 1 },
+        { banco: "", valor: 7000 },
+      ],
+      semBanco: [{ chave: "6|DONO" }],
     });
     // Lançamentos manuais (repasses por fora, sem extrato): somam na conta e no geral, sem contar como extrato.
     expect(totais(casos, {}, [{ conta: "ITAÚ", valor: 1000 }, { conta: "ITAÚ", valor: 500 }])).toMatchObject({
@@ -433,5 +443,21 @@ describe("conferência recibo × repasse", () => {
     const [caso] = conferir([RECIBO_NORMAL], [p]);
     expect(caso.status).toBe("ok");
     expect(caso.apontamentos[0].tipo).toBe("aviso");
+  });
+});
+
+describe("jaPagosAntes", () => {
+  it("acha o extrato que já veio num lote anterior pelo número e proprietário, mesmo com outro valor", () => {
+    const agora = repasse([["Aluguel", 672186, true]], { contrato: "14793", numero: "361775" });
+    const outro = repasse([["Aluguel", 1000, true]], { contrato: "2", numero: "2" });
+    const antes = repasse([["Aluguel", 709686, true]], { contrato: "14793", numero: "361775", arquivo: "lote-16.pdf" });
+    const achados = jaPagosAntes([agora, agora, outro], [antes, { ...outro, numero: "" , proprietario: "OUTRO" }]);
+    expect(achados).toMatchObject([{ id: idRepasse(agora), contrato: "14793", valor: 672186, valorAntes: 709686 }]);
+    // Fora da soma: some do relatório até a pessoa liberar.
+    expect(conferirSem([], [agora, outro], new Set(achados.map((j) => j.id))).flatMap((c) => c.repasses.map((r) => r.valor))).toEqual([1000]);
+  });
+  it("leva a soma das linhas de cada extrato para o relatório", () => {
+    const [c] = conferir([], [{ ...repasse([["Aluguel", 1000, true]]), pago: 999 }]);
+    expect(c.repasses[0]).toMatchObject({ valor: 999, liquido: 1000 });
   });
 });
