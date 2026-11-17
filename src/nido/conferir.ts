@@ -163,6 +163,9 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
         texto: `Taxa de intermediação de ${reais(intermediacao.bruto)} diferente de 100% do aluguel (${reais(aluguel)}): depende do acordo, conferir manualmente.`,
       });
     else ok.push(`Taxa de intermediação de ${reais(intermediacao.bruto)} = 100% do aluguel.`);
+  } else if (modo !== "pre-cadastro" && aluguel === 0 && adm) {
+    // Ex.: "Acordo ref. aos boletos Alugueis": a base da taxa não é uma linha "Aluguel", então o código não calcula.
+    ap.push({ tipo: "manual", texto: `Taxa ADM de ${reais(adm.bruto)} sem linha de aluguel (ex.: acordo): conferir manualmente o valor.` });
   } else if (modo !== "pre-cadastro" && aluguel > 0) {
     if (!adm) div("Taxa ADM não descontada.");
     else if (r0.taxaAdm === null) ap.push({ tipo: "manual", texto: "Percentual da taxa ADM não encontrado no extrato." });
@@ -260,8 +263,8 @@ export function totais(casos: Caso[], escolhas: Record<string, Conta> = {}, manu
       if (r.caucao) {
         caucao.valor += r.caucao;
         caucao.extratos++;
-        if (!valor) continue; // extrato só de caução: fica fora da soma, da contagem e do quadro "sem banco"
       }
+      if (!valor) continue; // extrato só de caução ou de R$ 0,00: nada a pagar, fica fora da soma, da contagem e do quadro "sem banco"
       const chave = chaveRepasse(c.contrato, r.proprietario);
       const escolhida = r.banco ? null : (escolhas[chave] ?? null);
       if (!r.banco) semBanco.push({ id: r.id, chave, contrato: c.contrato, proprietario: r.proprietario, valor, onde: r.onde, conta: escolhida });
@@ -306,8 +309,10 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
   // O mesmo recibo/extrato pode vir em dois arquivos enviados: cópia idêntica não é duplicidade.
   const unicosPor = <T>(itens: T[], id: (x: T) => string) =>
     itens.filter((x, i) => itens.findIndex((y) => id(y) === id(x)) === i);
-  const recibos = unicosPor(todosRecibos, (r) => JSON.stringify({ ...r, arquivo: "", pagina: 0, origem: "" }));
-  const repasses = unicosPor(todosRepasses, idRepasse);
+  const conteudo = (r: Recibo | Repasse) => JSON.stringify({ ...r, arquivo: "", pagina: 0, origem: "" });
+  const recibos = unicosPor(todosRecibos, conteudo);
+  // Só a cópia idêntica sai; duas versões diferentes do mesmo extrato ficam e viram divergência abaixo.
+  const repasses = unicosPor(todosRepasses, conteudo);
   const chave = (contrato: string, vencimento: string) => `${contrato}|${vencimento}`;
   const grupos = new Map<string, { recibos: Recibo[]; repasses: Repasse[] }>();
   const grupo = (k: string) => grupos.get(k) ?? grupos.set(k, { recibos: [], repasses: [] }).get(k)!;
@@ -316,7 +321,7 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
 
   // Mais de um repasse para o mesmo contrato, competência e proprietário: grave.
   const porCompetencia = new Map<string, number>();
-  for (const r of repasses) {
+  for (const r of unicosPor(repasses, idRepasse)) {
     const k = `${r.contrato}|${r.competencia}|${simples(r.proprietario)}`;
     porCompetencia.set(k, (porCompetencia.get(k) ?? 0) + 1);
   }
@@ -330,6 +335,12 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
     const recibo = g.recibos[0] ?? null;
 
     if (g.recibos.length > 1) ap.push({ tipo: "manual", texto: "Mais de um recibo com o mesmo contrato e vencimento." });
+    // Mesmo número e proprietário com conteúdo diferente: original e corrigido enviados juntos.
+    for (const r of g.repasses.filter((r, i, a) => a.findIndex((x) => idRepasse(x) === idRepasse(r)) !== i))
+      ap.push({
+        tipo: "divergencia",
+        texto: `Extrato de repasse nº ${r.numero} (${r.proprietario}) veio em duas versões diferentes. Use “Adicionar ou trocar extratos” com a versão certa.`,
+      });
     // Um extrato por proprietário; o mesmo proprietário duas vezes é repasse em duplicidade.
     const duplicados = g.repasses.filter(
       (r) => (porCompetencia.get(`${r.contrato}|${r.competencia}|${simples(r.proprietario)}`) ?? 0) > 1,

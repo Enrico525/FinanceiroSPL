@@ -7,7 +7,9 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
 
 - Os dois relatórios devem ser **exportados direto do NIDO**. PDF gerado por “Imprimir → Microsoft Print to PDF”
   não tem texto e é recusado.
-- Pode enviar vários arquivos de cada lado. O mesmo recibo/extrato repetido em dois arquivos conta uma vez só.
+- Pode enviar vários arquivos de cada lado. O mesmo recibo/extrato repetido (cópia idêntica) conta uma vez só.
+  O mesmo extrato (número e proprietário) em **duas versões diferentes** é divergência: a pessoa usa "Adicionar ou
+  trocar extratos" com a versão certa.
 - **Juntar PDF:** página que junta vários Extratos de Repasse num PDF só e baixa o arquivo. O PDF juntado é lido
   como qualquer outro, e o app mostra de qual arquivo original veio cada página.
 - Dois modos de conferência:
@@ -42,6 +44,7 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
 
 - Tudo o que o inquilino pagou e pertence ao proprietário tem que aparecer no extrato, com o mesmo valor.
 - **Taxa ADM** = (aluguel − abono + multa e juros) × percentual do extrato, arredondada (juros são cobrados só sobre o aluguel e entram na base). Ausente ou diferente: divergência.
+  Taxa ADM sem linha que comece com "Aluguel" (ex.: "Acordo ref. aos boletos Alugueis"): conferência manual.
   **Aluguel Gerador** e **manutenção** (ex.: "Manutenção Elevador") **não entram** na base. **Abono de benfeitoria**
   (ex.: "Abono/ Benfeitoria 4/4") **não diminui** a base: a taxa vai sobre o aluguel cheio.
 - **Taxa Adm no recibo**: só é certa por acordo do contrato (ex.: 7840), que não aparece no PDF; conferência manual.
@@ -70,6 +73,8 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
 - **Depósito caução** nunca entra no total: o valor da linha "Depósito Caução" do extrato é descontado da soma. O
   extrato que é só caução fica fora da soma, da contagem de extratos e do quadro "sem banco"; o relatório mostra à
   parte quantos são e quanto somam. A conferência do contrato continua igual.
+- Extrato de **R$ 0,00** (nada a pagar) também fica fora da soma, da contagem e do quadro "sem banco"; a conferência
+  do contrato continua igual.
 - Separada pela conta de onde sai a transferência: repasse para **Bradesco** sai do Bradesco; para **qualquer outro
   banco** (Itaú, Banco do Brasil, Inter, Santander…) sai do **Itaú**.
 - Extrato **sem banco**: fica em linha à parte, destacada, até a pessoa escolher no relatório "Somar no Itaú" ou
@@ -85,3 +90,5 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
 - **Lançamento manual**: repasse feito por fora do NIDO, sem extrato. A pessoa digita o valor no relatório e escolhe
   a conta (Itaú ou Bradesco); ele soma no total da conta e no geral, não conta como extrato e não é conferido.
   Vale só para aquela conferência (nada é guardado).
+- **Pesquisa de contrato** acima das tabelas de pagamento: esconde na tela os contratos que não batem com o número
+  digitado. Não muda totais nem impressão.

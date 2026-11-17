@@ -64,7 +64,7 @@ A rota `/api/analisar` (OpenAI) continua no Worker, mas o app não a usa mais.
 
 ## Limites (provisórios, `shared/contrato.ts`)
 
-20 MB por arquivo · 200 páginas por documento · 400.000 caracteres no total · corpo até 4 MB.
+20 MB por arquivo · 1.000 páginas por documento · 400.000 caracteres no total · corpo até 4 MB.
 
 ## Ambientes
 

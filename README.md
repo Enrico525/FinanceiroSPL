@@ -30,7 +30,9 @@ Os PDFs são lidos e conferidos **no navegador**, com regras fixas e sem IA: nad
 
 **Relatório**
 
-- Lista tudo o que foi conferido, com o que bateu e o que foi apontado.
+- Feito para pagar: uma tabela por conta de saída com contrato, proprietário, dados bancários e valor. O que bateu
+  e o que foi apontado ficam na tela de resultado, não no relatório.
+- **Pesquisa de contrato** acima das tabelas: mostra só os contratos com aquele número (a impressão continua com todos).
 - **Total a repassar** no geral e por conta de saída: repasse para Bradesco sai do Bradesco; para qualquer outro
   banco, sai do Itaú.
 - **Relatório por conta:** “Todos”, “Só Bradesco” ou “Só Itaú”. Com uma conta escolhida, totais, contratos e
@@ -71,7 +73,7 @@ O servidor (Worker) só cuida do login e de entregar o site. Detalhes em [ARCHIT
 5. Trate as pendências:
    - **Com divergência** e **Conferir manualmente:** confira no NIDO e marque “Conferi manualmente” quando estiver certo.
    - **Recibo sem extrato** e **Extrato sem recibo:** normalmente é arquivo que não foi enviado.
-6. Abra **Ver relatório do que foi conferido**. Escolha a conta dos extratos sem banco, digite os lançamentos
+6. Abra **Ver relatório de repasses**. Escolha a conta dos extratos sem banco, digite os lançamentos
    manuais, remova o que não entra no lote e escolha “Só Bradesco” ou “Só Itaú” para imprimir um relatório por conta.
 7. “Imprimir / salvar em PDF” guarda a cópia. Ao sair, tudo é apagado.
 
