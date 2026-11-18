@@ -279,6 +279,12 @@ describe("conferência recibo × repasse", () => {
     expect(textos([RECIBO_NORMAL], [p])).toEqual(['divergencia: "Taxa de Expediente" (R$ 7,50) foi repassado, mas deveria ficar retido.']);
   });
 
+  it('"Taxa Expediente" (sem "de") também fica retida (8867, 18/11/2026)', () => {
+    const r = recibo([["Aluguel 03/12", 200000, 0], ["Taxa Expediente", 750, 0]]);
+    const p = repasse([["Aluguel 03/12", 200000, true], ["Taxa ADM./Aluguel", 10000, false]]);
+    expect(textos([r], [p])).toEqual([]);
+  });
+
   it("abono e IRRF são débito ao proprietário", () => {
     const r = recibo([
       ["Aluguel", 200000, 0],
@@ -308,6 +314,13 @@ describe("conferência recibo × repasse", () => {
     expect(textos([r], [comMulta])[0]).toMatch(/^divergencia: Multa repassada/);
     const diferente = repasse([["Aluguel 01/12", 140000, true], ["Taxa Intermediação", 70000, false]]);
     expect(status([r], [diferente])).toEqual(["manual"]);
+  });
+
+  it("Contas PG Special: IPTU com crédito e débito na mesma linha fica retido (11039, 18/11/2026)", () => {
+    const r = recibo([["Aluguel", 200000, 0], ["IPTU", 30000, 0]]);
+    const p = repasse([["Aluguel", 200000, true], ["Taxa ADM./Aluguel", 10000, false]], { situacao: "Contas PG Special" });
+    p.linhas.push({ vencimento: V, historico: "IPTU", bruto: 30000, participacao: "100,00", debito: 30000, credito: 30000 });
+    expect(textos([r], [p])).toEqual(["manual: Situação Contas PG Special: conferir manualmente (valores checados abaixo)."]);
   });
 
   it("Contas PG Special: retém condomínio e IPTU, repassa aluguel e multa, e vai para conferência manual", () => {

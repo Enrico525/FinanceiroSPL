@@ -58,9 +58,11 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
   Nesse caso a **multa não é repassada**.
 - **Abono e IRRF**: crédito ao inquilino no recibo, débito ao proprietário no extrato.
 - **Multa e juros**: repassados ao proprietário (exceto com taxa de intermediação).
-- **Ficam retidos** (não podem aparecer como crédito ao proprietário): taxa de expediente, serviço (de) despachante (ex.: "Serviço Despachante Enel/Sabesp"),
+- **Ficam retidos** (não podem aparecer como crédito ao proprietário): taxa (de) expediente (ex.: "Taxa Expediente"), serviço (de) despachante (ex.: "Serviço Despachante Enel/Sabesp"),
   taxa de assinatura digital, taxa de boleto, matrícula atualizada, boleto de caucionamento e seguros.
   Seguro repassado vai para conferência manual (há casos em que é repassado).
+- Linha do extrato com **crédito e débito iguais** (ex.: IPTU em Contas PG Special) passa pelo extrato e fica retida:
+  conta como retida e vale uma vez só na soma das partes.
 - **Descontos previstos ao proprietário**: taxa de repasse, taxa de renovação e vistoria.
   Outros débitos ao proprietário sem origem no recibo aparecem como aviso.
 - Lançamento com **“diferença”** no histórico vai para conferência manual.
