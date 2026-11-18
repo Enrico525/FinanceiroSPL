@@ -69,6 +69,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Extrato de R$ 0,00 (11/2026): fora da soma, da contagem e do quadro "sem banco", como o só de caução.
 - Linhas iguais no mesmo extrato (11/2026): dois lançamentos com o mesmo histórico e valor (ex.: dois "Condomínio")
   são lançamentos distintos, não partes de proprietários diferentes (antes viravam divergência falsa).
+- Crédito e débito na mesma linha (11/2026): o líquido manda (11039: IPTU em Contas PG Special é retido); "Taxa
+  Expediente" sem "de" também fica retida (8867).
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
 
 ## Pendências (aguardando o negócio)

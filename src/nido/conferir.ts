@@ -44,11 +44,14 @@ const ehDiferenca = (h: string) => /diferen[cç]a/i.test(h);
 // Pagos pelo inquilino e retidos pela imobiliária: nunca vão ao proprietário.
 const ehRetidoNoRecibo = (h: string) =>
   ehSeguro(h) ||
-  /^(taxa de expediente|servi[cç]o (de )?despachante|despachante|taxa (de )?assinatura digital|taxa (de )?boleto|boleto de cau?[cç]ionamento|matr[ií]cula atualizada)/i.test(
+  /^(taxa (de )?expediente|servi[cç]o (de )?despachante|despachante|taxa (de )?assinatura digital|taxa (de )?boleto|boleto de cau?[cç]ionamento|matr[ií]cula atualizada)/i.test(
     h,
   );
 // Descontos ao proprietário previstos no extrato, sem origem no recibo.
 const ehDebitoPrevisto = (h: string) => /^(taxa de repasse|taxa de renova[cç][aã]o|vistoria)/i.test(h);
+
+// Linha com crédito e débito iguais (ex.: IPTU em Contas PG Special, 11039) passa e fica retida: vale uma vez só.
+const parte = (l: LinhaRepasse) => Math.max(l.credito, l.debito);
 
 /** "33,33" → 3333 (centésimos de ponto percentual). */
 const participacao = (p: string) => {
@@ -116,7 +119,7 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
     const cobertura = partes.reduce((n, x) => n + participacao(x.participacao), 0);
     if (cobertura >= 9990) {
       // Todos os proprietários nos arquivos: as partes devem somar o total.
-      const soma = partes.reduce((n, x) => n + x.credito + x.debito, 0);
+      const soma = partes.reduce((n, x) => n + parte(x), 0);
       if (Math.abs(soma - bruto) > (partes.length > 1 ? partes.length : 0))
         div(`"${partes[0].historico}": as partes dos proprietários somam ${reais(soma)}, mas o total é ${reais(bruto)}.`);
       else if (partes.length > 1) ok.push(`"${partes[0].historico}": partes dos proprietários somam o total de ${reais(bruto)}.`);
@@ -128,9 +131,9 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
     const tolerancia = Math.ceil(bruto / 20_000) + 1;
     for (const x of partes) {
       const esperado = Math.round((bruto * participacao(x.participacao)) / 10_000);
-      if (Math.abs(x.credito + x.debito - esperado) > tolerancia)
-        div(`"${x.historico}": parte de ${reais(x.credito + x.debito)} não confere com ${x.participacao}% de ${reais(bruto)} (${reais(esperado)}).`);
-      else ok.push(`"${x.historico}": parte de ${reais(x.credito + x.debito)} = ${x.participacao}% de ${reais(bruto)}.`);
+      if (Math.abs(parte(x) - esperado) > tolerancia)
+        div(`"${x.historico}": parte de ${reais(parte(x))} não confere com ${x.participacao}% de ${reais(bruto)} (${reais(esperado)}).`);
+      else ok.push(`"${x.historico}": parte de ${reais(parte(x))} = ${x.participacao}% de ${reais(bruto)}.`);
     }
   }
   if (parcial)
@@ -189,7 +192,7 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
   // Cada lançamento do recibo é procurado no repasse pelo valor e pelo sentido (crédito/débito).
   const livres = new Set(linhas.filter((l) => !ehPagamentoAdm(l.historico) && !ehIntermediacao(l.historico)));
   const tirar = (valor: number, credito: boolean, historico: string) => {
-    const candidatos = [...livres].filter((l) => l.bruto === valor && (credito ? l.credito > 0 : l.debito > 0));
+    const candidatos = [...livres].filter((l) => l.bruto === valor && (credito ? l.credito > l.debito : l.debito > l.credito));
     const achado = candidatos.find((l) => simples(l.historico).startsWith(simples(historico).slice(0, 4))) ?? candidatos[0];
     if (achado) livres.delete(achado);
     return achado;
@@ -238,8 +241,8 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
 
   for (const l of livres)
     if (ehDiferenca(l.historico)) continue;
-    else if (l.credito > 0) div(`Crédito ao proprietário sem correspondente no recibo: "${l.historico}" ${reais(l.bruto)}.`);
-    else if (!ehDebitoPrevisto(l.historico))
+    else if (l.credito > l.debito) div(`Crédito ao proprietário sem correspondente no recibo: "${l.historico}" ${reais(l.bruto)}.`);
+    else if (l.debito > l.credito && !ehDebitoPrevisto(l.historico))
       ap.push({ tipo: "aviso", texto: `Débito ao proprietário sem origem no recibo: "${l.historico}" ${reais(l.bruto)}.` });
 }
 
