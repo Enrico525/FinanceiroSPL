@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 
 // Cada publicação gera um /assets/index-<hash>.js novo: se o index.html do servidor aponta para outro, há versão nova.
 const scriptDoApp = (html: string) => html.match(/src="(\/assets\/[^"]+\.js)"/)?.[1];
-const CINCO_MINUTOS = 5 * 60 * 1000;
+// index.html é arquivo estático (não passa pelo Worker nem pelo limite da API): verificar a cada 30 s não custa nada.
+const INTERVALO = 30 * 1000;
 
 export function AvisoAtualizacao() {
   const [nova, setNova] = useState(false);
@@ -19,7 +20,7 @@ export function AvisoAtualizacao() {
         })
         .catch(() => {}); // sem rede: tenta de novo depois
     const aoVoltar = () => document.visibilityState === "visible" && verificar();
-    const timer = setInterval(verificar, CINCO_MINUTOS);
+    const timer = setInterval(verificar, INTERVALO);
     document.addEventListener("visibilitychange", aoVoltar);
     return () => {
       clearInterval(timer);

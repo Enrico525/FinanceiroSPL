@@ -72,7 +72,7 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Crédito e débito na mesma linha (11/2026): o líquido manda (11039: IPTU em Contas PG Special é retido); "Taxa
   Expediente" sem "de" também fica retida (8867).
 - Honorário judicial (11/2026): fica sempre com a Special (retido, como a taxa de expediente).
-- Aviso de versão nova (11/2026): a cada 5 min e ao voltar para a aba, o app compara o `/assets/index-*.js` do
+- Aviso de versão nova (11/2026): a cada 30 s e ao voltar para a aba, o app compara o `/assets/index-*.js` do
   index.html do servidor com o carregado (`AvisoAtualizacao.tsx`) e mostra "Atualizar agora". Atualizar limpa a tela.
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
 
