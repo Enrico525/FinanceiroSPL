@@ -71,6 +71,7 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   são lançamentos distintos, não partes de proprietários diferentes (antes viravam divergência falsa).
 - Crédito e débito na mesma linha (11/2026): o líquido manda (11039: IPTU em Contas PG Special é retido); "Taxa
   Expediente" sem "de" também fica retida (8867).
+- Honorário judicial (11/2026): fica sempre com a Special (retido, como a taxa de expediente).
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
 
 ## Pendências (aguardando o negócio)
