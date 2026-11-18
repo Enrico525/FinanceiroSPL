@@ -285,6 +285,14 @@ describe("conferência recibo × repasse", () => {
     expect(textos([r], [p])).toEqual([]);
   });
 
+  it("honorário judicial fica sempre com a Special", () => {
+    const r = recibo([["Aluguel 03/12", 200000, 0], ["Honorário Judicial 4/7", 51920, 0]]);
+    const p = repasse([["Aluguel 03/12", 200000, true], ["Taxa ADM./Aluguel", 10000, false]]);
+    expect(textos([r], [p])).toEqual([]);
+    const repassou = repasse([...p.linhas.map((l) => [l.historico, l.bruto, l.credito > 0] as [string, number, boolean]), ["Honorário Judicial 4/7", 51920, true]]);
+    expect(textos([r], [repassou])).toEqual(['divergencia: "Honorário Judicial 4/7" (R$ 519,20) foi repassado, mas deveria ficar retido.']);
+  });
+
   it("abono e IRRF são débito ao proprietário", () => {
     const r = recibo([
       ["Aluguel", 200000, 0],

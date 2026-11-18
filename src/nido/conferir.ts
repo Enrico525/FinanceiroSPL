@@ -44,7 +44,7 @@ const ehDiferenca = (h: string) => /diferen[cç]a/i.test(h);
 // Pagos pelo inquilino e retidos pela imobiliária: nunca vão ao proprietário.
 const ehRetidoNoRecibo = (h: string) =>
   ehSeguro(h) ||
-  /^(taxa (de )?expediente|servi[cç]o (de )?despachante|despachante|taxa (de )?assinatura digital|taxa (de )?boleto|boleto de cau?[cç]ionamento|matr[ií]cula atualizada)/i.test(
+  /^(taxa (de )?expediente|honor[aá]rios? judicia(l|is)|servi[cç]o (de )?despachante|despachante|taxa (de )?assinatura digital|taxa (de )?boleto|boleto de cau?[cç]ionamento|matr[ií]cula atualizada)/i.test(
     h,
   );
 // Descontos ao proprietário previstos no extrato, sem origem no recibo.
