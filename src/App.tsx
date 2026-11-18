@@ -4,6 +4,7 @@ import { lerPdf, ErroLeitura } from "./pdf/extrair";
 import { juntarPdfs } from "./pdf/juntar";
 import { extratosNaoLidos, lerRecibos, lerRepasses, type Recibo, type Repasse } from "./nido/ler";
 import { conferirSem, idRepasse, jaPagosAntes } from "./nido/conferir";
+import { AvisoAtualizacao } from "./components/AvisoAtualizacao";
 import { SeletorPdf, type ArquivoLido } from "./components/SeletorPdf";
 import { Resultado } from "./components/Resultado";
 import { Login } from "./components/Login";
@@ -200,6 +201,7 @@ export function App() {
           </button>
         </div>
       </header>
+      <AvisoAtualizacao />
       {avisoSair && (
         <p className="alerta aviso-topo" role="status">
           O login simulado de desenvolvimento (DEV_EMAIL) está ativo, então não há sessão para encerrar. Para testar o
