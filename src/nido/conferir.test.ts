@@ -369,6 +369,11 @@ describe("conferência recibo × repasse", () => {
     expect(status([], [REPASSE_NORMAL, { ...REPASSE_NORMAL, numero: "2" }])).toEqual(["divergencia"]);
   });
 
+  it("vencimentos diferentes na mesma competência não são duplicidade (inquilino devendo, 14990)", () => {
+    const outro = { ...REPASSE_NORMAL, numero: "2", vencimento: "15/11/2026" };
+    expect(textos([], [REPASSE_NORMAL, outro]).filter((t) => t.includes("Mais de um repasse"))).toEqual([]);
+  });
+
   it("dois repasses na mesma competência para o mesmo contrato e proprietário", () => {
     const outro = { ...REPASSE_NORMAL, numero: "2" };
     expect(textos([RECIBO_NORMAL], [REPASSE_NORMAL, outro])[0]).toMatch(/^divergencia: Mais de um repasse na competência 10\/2026/);

@@ -73,7 +73,9 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
   proprietários (ex.: dois "Condomínio" de R$ 500).
 - Créditos − débitos de cada extrato devem ser iguais ao valor pago ao proprietário. Quando não são, além da
   divergência, o extrato aparece em vermelho no topo do resultado e do relatório (entra na soma com o valor do NIDO).
-- **Grave:** mais de um repasse na mesma competência para o mesmo contrato e proprietário.
+- **Grave:** mais de um repasse na mesma competência e no mesmo vencimento para o mesmo contrato e proprietário.
+  Vencimentos diferentes na mesma competência são boletos diferentes (ex.: inquilino que estava devendo, acordo) e não
+  são divergência.
 - Recibo sem extrato, ou extrato sem recibo (fora Aluguel Garantido e Pré-cadastro), aparece em seção própria
   ("Recibo sem extrato" / "Extrato sem recibo"), separada das divergências: pode ser só arquivo faltando.
   Mesmo contrato com vencimento diferente continua sendo divergência.
