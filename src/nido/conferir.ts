@@ -346,10 +346,11 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
   for (const r of recibos) grupo(chave(r.contrato, r.vencimento)).recibos.push(r);
   for (const r of repasses) grupo(chave(r.contrato, r.vencimento)).repasses.push(r);
 
-  // Mais de um repasse para o mesmo contrato, competência e proprietário: grave.
+  // Mais de um repasse para o mesmo contrato, competência, proprietário e vencimento: grave. Vencimentos diferentes
+  // na mesma competência são boletos diferentes (inquilino que estava devendo, acordo: 14990, 18/11/2026).
   const porCompetencia = new Map<string, number>();
   for (const r of unicosPor(repasses, idRepasse)) {
-    const k = `${r.contrato}|${r.competencia}|${simples(r.proprietario)}`;
+    const k = `${r.contrato}|${r.competencia}|${simples(r.proprietario)}|${r.vencimento}`;
     porCompetencia.set(k, (porCompetencia.get(k) ?? 0) + 1);
   }
 
@@ -370,7 +371,7 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
       });
     // Um extrato por proprietário; o mesmo proprietário duas vezes é repasse em duplicidade.
     const duplicados = g.repasses.filter(
-      (r) => (porCompetencia.get(`${r.contrato}|${r.competencia}|${simples(r.proprietario)}`) ?? 0) > 1,
+      (r) => (porCompetencia.get(`${r.contrato}|${r.competencia}|${simples(r.proprietario)}|${r.vencimento}`) ?? 0) > 1,
     );
     if (duplicados.length)
       ap.push({
