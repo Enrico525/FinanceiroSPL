@@ -5,6 +5,9 @@ import { valorDigitado } from "../nido/ler";
 import type { Modo } from "../App";
 import { normalizarNome } from "../../shared/credenciais";
 
+// O NIDO às vezes traz a Descrição só com "***" (cadastro sem observação): sem letra nem número, não conta.
+const descricaoUtil = (d: string) => (/[\p{L}\d]/u.test(d) ? d : "");
+
 const ROTULO = { divergencia: "Divergência", manual: "Conferir", aviso: "Aviso" } as const;
 const PESO = { divergencia: 0, manual: 1, aviso: 2 } as const;
 // Caso que tinha divergência ou ia para conferência manual e a pessoa marcou como certo (só nesta tela).
@@ -373,8 +376,8 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
                     </td>
                     <td>
                       {/* Na impressão, o titular da conta (Descrição do extrato) vem em destaque; sem Descrição, o titular é o proprietário. */}
-                      {r.pagamento.descricao && <strong className="pagamentos__destaque so-impressao">{r.pagamento.descricao}</strong>}
-                      <strong className={`pagamentos__destaque ${r.pagamento.descricao ? "pagamentos__secundario" : ""}`}>{r.proprietario}</strong>
+                      {descricaoUtil(r.pagamento.descricao) && <strong className="pagamentos__destaque so-impressao">{descricaoUtil(r.pagamento.descricao)}</strong>}
+                      <strong className={`pagamentos__destaque ${descricaoUtil(r.pagamento.descricao) ? "pagamentos__secundario" : ""}`}>{r.proprietario}</strong>
                       {r.pagamento.documento && <span className="caso__meta">{r.pagamento.documento}</span>}
                     </td>
                     <td>
@@ -386,8 +389,8 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
                               .filter(Boolean)
                               .join(" · ")}
                           </strong>
-                          {(r.pagamento.forma || r.pagamento.descricao) && (
-                            <span className="caso__meta">{[r.pagamento.forma, r.pagamento.descricao].filter(Boolean).join(" · ")}</span>
+                          {(r.pagamento.forma || descricaoUtil(r.pagamento.descricao)) && (
+                            <span className="caso__meta">{[r.pagamento.forma, descricaoUtil(r.pagamento.descricao)].filter(Boolean).join(" · ")}</span>
                           )}
                           {atual !== contaDeSaida(r.banco) && <span className="selo selo--manual">Conta trocada à mão</span>}
                           {atual && (
