@@ -3,6 +3,7 @@ import { flushSync } from "react-dom";
 import { CONTA_BRADESCO, CONTA_ITAU, chaveRepasse, contaDeSaida, contaDoRepasse, reais, totais, type Caso, type Conta, type JaPago, type Manual } from "../nido/conferir";
 import { valorDigitado } from "../nido/ler";
 import type { Modo } from "../App";
+import { normalizarNome } from "../../shared/credenciais";
 
 const ROTULO = { divergencia: "Divergência", manual: "Conferir", aviso: "Aviso" } as const;
 const PESO = { divergencia: 0, manual: 1, aviso: 2 } as const;
@@ -141,9 +142,12 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
   const digitos = (s: string) => s.replace(/\D/g, "");
   // Pesquisa das tabelas de pagamento: só esconde na tela; o que não bate continua na impressão.
   const [buscaPagamento, setBuscaPagamento] = useState("");
-  const pagamentoAchado = (contrato: string) => contrato.includes(digitos(buscaPagamento));
+  // Com letras, procura no nome do proprietário (sem acento/maiúscula); só números, no contrato.
+  const bate = (busca: string, contrato: string, proprietario: string) =>
+    /\p{L}/u.test(busca) ? normalizarNome(proprietario).includes(normalizarNome(busca)) : contrato.includes(digitos(busca));
+  const pagamentoAchado = (contrato: string, proprietario: string) => bate(buscaPagamento, contrato, proprietario);
   const achados = lista.flatMap((c) =>
-    c.repasses.filter((r) => c.contrato.includes(digitos(buscaContrato)) && digitos(reais(r.valor)).includes(digitos(buscaValor))).map((r) => ({ c, r })),
+    c.repasses.filter((r) => bate(buscaContrato, c.contrato, r.proprietario) && digitos(reais(r.valor)).includes(digitos(buscaValor))).map((r) => ({ c, r })),
   );
   return (
     <div className="relatorio">
@@ -210,8 +214,8 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
           <summary>Ver os {t.repasses} repasses da soma (para excluir algum)</summary>
           <div className="soma-lista__busca">
             <label className="campo">
-              Pesquisar por número do contrato
-              <input type="search" inputMode="numeric" value={buscaContrato} onChange={(e) => setBuscaContrato(e.target.value)} placeholder="Ex.: 15215" />
+              Pesquisar por contrato ou proprietário
+              <input type="search" value={buscaContrato} onChange={(e) => setBuscaContrato(e.target.value)} placeholder="Ex.: 15215 ou Maria" />
             </label>
             <label className="campo">
               Pesquisar por valor
@@ -335,11 +339,11 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
       </section>
       <div className="soma-lista__busca nao-imprimir">
         <label className="campo">
-          Pesquisar contrato nas tabelas abaixo
-          <input type="search" inputMode="numeric" value={buscaPagamento} onChange={(e) => setBuscaPagamento(e.target.value)} placeholder="Ex.: 15215" />
+          Pesquisar contrato ou proprietário nas tabelas abaixo
+          <input type="search" value={buscaPagamento} onChange={(e) => setBuscaPagamento(e.target.value)} placeholder="Ex.: 15215 ou Maria" />
         </label>
       </div>
-      {!pagamentos.some(({ c }) => pagamentoAchado(c.contrato)) && <p className="caso__meta nao-imprimir">Nenhum contrato encontrado.</p>}
+      {!pagamentos.some(({ c, r }) => pagamentoAchado(c.contrato, r.proprietario)) && <p className="caso__meta nao-imprimir">Nenhum contrato encontrado.</p>}
       {/* Pagamentos: um quadro por conta de saída, só com o necessário para pagar (a conferência fica na tela de resultado). */}
       {([CONTA_ITAU, CONTA_BRADESCO, ""] as const).map((conta) => {
         const linhas = pagamentos.filter((p) => p.conta === conta);
@@ -361,7 +365,7 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
               </thead>
               <tbody>
                 {linhas.map(({ c, r, conta: atual }) => (
-                  <tr key={r.id} className={pagamentoAchado(c.contrato) ? undefined : "oculto-na-tela"}>
+                  <tr key={r.id} className={pagamentoAchado(c.contrato, r.proprietario) ? undefined : "oculto-na-tela"}>
                     <td>
                       <strong className="pagamentos__destaque">{c.contrato}</strong>
                       <span className="caso__meta">{c.competencia && `comp. ${c.competencia}`}</span>
