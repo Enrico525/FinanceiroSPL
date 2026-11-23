@@ -181,11 +181,12 @@ input:focus-visible + .botao, label.botao:focus-within { outline: 3px solid var(
 .relatorio ul { margin: 0; padding: 0; list-style: none; font-size: 0.9rem; }
 .relatorio li + li { margin-top: 0.2rem; }
 
-@media screen { .oculto-na-tela { display: none; } }
+@media screen { .oculto-na-tela, .so-impressao { display: none !important; } }
 @media print {
   .topo, .aviso-topo, .subtitulo, .lateral, .alerta, .nao-imprimir, .conteudo > .acoes { display: none !important; }
   body, .relatorio { background: #fff; color: #000; }
   .relatorio { border: none; padding: 0; }
+  .pagamentos__secundario { font-size: 0.85rem; font-weight: 400; }
 }
 .resultado summary { cursor: pointer; }
 .resultado summary h2 { display: inline; font-size: 1.1rem; }

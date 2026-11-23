@@ -51,7 +51,11 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Depósito caução (11/2026): a linha "Depósito Caução" do extrato nunca soma nos totais do relatório (`totais`);
   a conferência do contrato não muda.
 - Pesquisa de contrato nas tabelas de pagamento do relatório (11/2026): só esconde na tela (`oculto-na-tela`);
-  totais e impressão continuam com todos os contratos.
+  totais e impressão continuam com todos os contratos. Ela e a da lista da soma aceitam número do contrato ou nome
+  do proprietário (com letras, busca no nome sem acento/maiúscula).
+- Titular da conta na impressão (11/2026): o NIDO não tem campo de beneficiário; só na impressão, a "Descrição" do
+  extrato (quando existe) vai em destaque na coluna Proprietário e o nome do proprietário fica menor embaixo. Na tela
+  nada muda.
 - Extrato em duas versões (11/2026): mesmo número e proprietário com conteúdo diferente é divergência (antes o
   primeiro ficava em silêncio); cópia idêntica continua contando uma vez.
 - Taxa ADM sem linha "Aluguel" (acordos, 11/2026): conferência manual, sem calcular a base.
