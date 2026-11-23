@@ -372,7 +372,9 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
                       {c.status !== "ok" && !c.aceito && <span className={`selo selo--${c.status === "divergencia" ? "divergencia" : "manual"}`}>{titulo[c.status]}</span>}
                     </td>
                     <td>
-                      <strong className="pagamentos__destaque">{r.proprietario}</strong>
+                      {/* Na impressão, o titular da conta (Descrição do extrato) vem em destaque; sem Descrição, o titular é o proprietário. */}
+                      {r.pagamento.descricao && <strong className="pagamentos__destaque so-impressao">{r.pagamento.descricao}</strong>}
+                      <strong className={`pagamentos__destaque ${r.pagamento.descricao ? "pagamentos__secundario" : ""}`}>{r.proprietario}</strong>
                       {r.pagamento.documento && <span className="caso__meta">{r.pagamento.documento}</span>}
                     </td>
                     <td>
