@@ -367,55 +367,58 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
                 </tr>
               </thead>
               <tbody>
-                {linhas.map(({ c, r, conta: atual }) => (
-                  <tr key={r.id} className={pagamentoAchado(c.contrato, r.proprietario) ? undefined : "oculto-na-tela"}>
-                    <td>
-                      <strong className="pagamentos__destaque">{c.contrato}</strong>
-                      <span className="caso__meta">{c.competencia && `comp. ${c.competencia}`}</span>
-                      {c.status !== "ok" && !c.aceito && <span className={`selo selo--${c.status === "divergencia" ? "divergencia" : "manual"}`}>{titulo[c.status]}</span>}
-                    </td>
-                    <td>
-                      {/* Na impressão, o titular da conta (Descrição do extrato) vem em destaque; sem Descrição, o titular é o proprietário. */}
-                      {descricaoUtil(r.pagamento.descricao) && <strong className="pagamentos__destaque so-impressao">{descricaoUtil(r.pagamento.descricao)}</strong>}
-                      <strong className={`pagamentos__destaque ${descricaoUtil(r.pagamento.descricao) ? "pagamentos__secundario" : ""}`}>{r.proprietario}</strong>
-                      {r.pagamento.documento && <span className="caso__meta">{r.pagamento.documento}</span>}
-                    </td>
-                    <td>
-                      {r.banco ? (
-                        <>
-                          <strong className="pagamentos__destaque">{r.banco}</strong>
-                          <strong className="pagamentos__conta">
-                            {[r.pagamento.agencia && `Ag. ${r.pagamento.agencia}`, r.pagamento.conta && `Conta ${r.pagamento.conta}`, r.pagamento.tipoConta]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </strong>
-                          {(r.pagamento.forma || descricaoUtil(r.pagamento.descricao)) && (
-                            <span className="caso__meta">{[r.pagamento.forma, descricaoUtil(r.pagamento.descricao)].filter(Boolean).join(" · ")}</span>
-                          )}
-                          {atual !== contaDeSaida(r.banco) && <span className="selo selo--manual">Conta trocada à mão</span>}
-                          {atual && (
-                            <button
-                              type="button"
-                              className="botao botao--texto nao-imprimir"
-                              onClick={() => aoEscolher(chaveRepasse(c.contrato, r.proprietario), atual === CONTA_ITAU ? CONTA_BRADESCO : CONTA_ITAU)}
-                            >
-                              Pagar pelo {NOME_CONTA[atual === CONTA_ITAU ? CONTA_BRADESCO : CONTA_ITAU]}
-                            </button>
-                          )}
-                        </>
-                      ) : (
-                        "sem dados bancários no extrato"
-                      )}
-                    </td>
-                    <td className="pagamentos__valor">
-                      <strong>{reais(r.valor - r.caucao)}</strong>
-                      {r.caucao > 0 && <span className="caso__meta">+ caução {reais(r.caucao)} (fora do total)</span>}
-                      <button type="button" className="botao botao--texto nao-imprimir" onClick={() => aoRemoverRepasse(r.id)}>
-                        Excluir
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {linhas.map(({ c, r, conta: atual }) => {
+                  const titular = descricaoUtil(r.pagamento.descricao);
+                  return (
+                    <tr key={r.id} className={pagamentoAchado(c.contrato, r.proprietario) ? undefined : "oculto-na-tela"}>
+                      <td>
+                        <strong className="pagamentos__destaque">{c.contrato}</strong>
+                        <span className="caso__meta">{c.competencia && `comp. ${c.competencia}`}</span>
+                        {c.status !== "ok" && !c.aceito && <span className={`selo selo--${c.status === "divergencia" ? "divergencia" : "manual"}`}>{titulo[c.status]}</span>}
+                      </td>
+                      <td>
+                        {/* Na impressão, o titular da conta (Descrição do extrato) vem em destaque; sem Descrição, o titular é o proprietário. */}
+                        {titular && <strong className="pagamentos__destaque so-impressao">{titular}</strong>}
+                        <strong className={`pagamentos__destaque ${titular ? "pagamentos__secundario" : ""}`}>{r.proprietario}</strong>
+                        {r.pagamento.documento && <span className="caso__meta">{r.pagamento.documento}</span>}
+                      </td>
+                      <td>
+                        {r.banco ? (
+                          <>
+                            <strong className="pagamentos__destaque">{r.banco}</strong>
+                            <strong className="pagamentos__conta">
+                              {[r.pagamento.agencia && `Ag. ${r.pagamento.agencia}`, r.pagamento.conta && `Conta ${r.pagamento.conta}`, r.pagamento.tipoConta]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </strong>
+                            {(r.pagamento.forma || titular) && (
+                              <span className="caso__meta">{[r.pagamento.forma, titular].filter(Boolean).join(" · ")}</span>
+                            )}
+                            {atual !== contaDeSaida(r.banco) && <span className="selo selo--manual">Conta trocada à mão</span>}
+                            {atual && (
+                              <button
+                                type="button"
+                                className="botao botao--texto nao-imprimir"
+                                onClick={() => aoEscolher(chaveRepasse(c.contrato, r.proprietario), atual === CONTA_ITAU ? CONTA_BRADESCO : CONTA_ITAU)}
+                              >
+                                Pagar pelo {NOME_CONTA[atual === CONTA_ITAU ? CONTA_BRADESCO : CONTA_ITAU]}
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          "sem dados bancários no extrato"
+                        )}
+                      </td>
+                      <td className="pagamentos__valor">
+                        <strong>{reais(r.valor - r.caucao)}</strong>
+                        {r.caucao > 0 && <span className="caso__meta">+ caução {reais(r.caucao)} (fora do total)</span>}
+                        <button type="button" className="botao botao--texto nao-imprimir" onClick={() => aoRemoverRepasse(r.id)}>
+                          Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </section>
