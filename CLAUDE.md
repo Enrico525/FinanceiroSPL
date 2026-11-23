@@ -55,7 +55,7 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   do proprietário (com letras, busca no nome sem acento/maiúscula).
 - Titular da conta na impressão (11/2026): o NIDO não tem campo de beneficiário; só na impressão, a "Descrição" do
   extrato (quando existe) vai em destaque na coluna Proprietário e o nome do proprietário fica menor embaixo. Na tela
-  nada muda.
+  nada muda. Descrição só com símbolos (o NIDO traz "***" em cadastros sem observação) é ignorada.
 - Extrato em duas versões (11/2026): mesmo número e proprietário com conteúdo diferente é divergência (antes o
   primeiro ficava em silêncio); cópia idêntica continua contando uma vez.
 - Taxa ADM sem linha "Aluguel" (acordos, 11/2026): conferência manual, sem calcular a base.
