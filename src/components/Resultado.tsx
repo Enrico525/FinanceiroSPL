@@ -148,7 +148,9 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
   // Com letras, procura no nome do proprietário (sem acento/maiúscula); só números, no contrato.
   const bate = (busca: string, contrato: string, proprietario: string) =>
     /\p{L}/u.test(busca) ? normalizarNome(proprietario).includes(normalizarNome(busca)) : contrato.includes(digitos(busca));
-  const pagamentoAchado = (contrato: string, proprietario: string) => bate(buscaPagamento, contrato, proprietario);
+  const [buscaValorPagamento, setBuscaValorPagamento] = useState("");
+  const pagamentoAchado = (contrato: string, proprietario: string, valor: number) =>
+    bate(buscaPagamento, contrato, proprietario) && digitos(reais(valor)).includes(digitos(buscaValorPagamento));
   const achados = lista.flatMap((c) =>
     c.repasses.filter((r) => bate(buscaContrato, c.contrato, r.proprietario) && digitos(reais(r.valor)).includes(digitos(buscaValor))).map((r) => ({ c, r })),
   );
@@ -345,8 +347,18 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
           Pesquisar contrato ou proprietário nas tabelas abaixo
           <input type="search" value={buscaPagamento} onChange={(e) => setBuscaPagamento(e.target.value)} placeholder="Ex.: 15215 ou Maria" />
         </label>
+        <label className="campo">
+          Pesquisar por valor
+          <input
+            type="search"
+            inputMode="decimal"
+            value={buscaValorPagamento}
+            onChange={(e) => setBuscaValorPagamento(e.target.value)}
+            placeholder="Ex.: 1.234,56"
+          />
+        </label>
       </div>
-      {!pagamentos.some(({ c, r }) => pagamentoAchado(c.contrato, r.proprietario)) && <p className="caso__meta nao-imprimir">Nenhum contrato encontrado.</p>}
+      {!pagamentos.some(({ c, r }) => pagamentoAchado(c.contrato, r.proprietario, r.valor - r.caucao)) &&<p className="caso__meta nao-imprimir">Nenhum contrato encontrado.</p>}
       {/* Pagamentos: um quadro por conta de saída, só com o necessário para pagar (a conferência fica na tela de resultado). */}
       {([CONTA_ITAU, CONTA_BRADESCO, ""] as const).map((conta) => {
         const linhas = pagamentos.filter((p) => p.conta === conta);
@@ -370,7 +382,7 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
                 {linhas.map(({ c, r, conta: atual }) => {
                   const titular = descricaoUtil(r.pagamento.descricao);
                   return (
-                    <tr key={r.id} className={pagamentoAchado(c.contrato, r.proprietario) ? undefined : "oculto-na-tela"}>
+                    <tr key={r.id} className={pagamentoAchado(c.contrato, r.proprietario, r.valor - r.caucao) ?undefined : "oculto-na-tela"}>
                       <td>
                         <strong className="pagamentos__destaque">{c.contrato}</strong>
                         <span className="caso__meta">{c.competencia && `comp. ${c.competencia}`}</span>
