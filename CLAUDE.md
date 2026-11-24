@@ -52,7 +52,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   a conferência do contrato não muda.
 - Pesquisa de contrato nas tabelas de pagamento do relatório (11/2026): só esconde na tela (`oculto-na-tela`);
   totais e impressão continuam com todos os contratos. Ela e a da lista da soma aceitam número do contrato ou nome
-  do proprietário (com letras, busca no nome sem acento/maiúscula).
+  do proprietário (com letras, busca no nome sem acento/maiúscula). As duas também têm um campo de valor (só os
+  dígitos contam; nas tabelas de pagamento é o valor mostrado, já sem caução).
 - Titular da conta na impressão (11/2026): o NIDO não tem campo de beneficiário; só na impressão, a "Descrição" do
   extrato (quando existe) vai em destaque na coluna Proprietário e o nome do proprietário fica menor embaixo. Na tela
   nada muda. Descrição só com símbolos (o NIDO traz "***" em cadastros sem observação) é ignorada.
