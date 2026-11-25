@@ -7,7 +7,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 ## Regras inegociáveis
 
 - **Sem banco de dados e sem persistência** de PDFs, textos, resultados ou histórico. Nada de D1, R2, KV, IndexedDB, localStorage, sessionStorage.
-  **Única exceção: os represados** (ver Decisões), no Supabase, só os dados lidos e só até concluir.
+  **Exceções, no Supabase:** os represados (ver Decisões), só os dados lidos e só até concluir; e as contas de login
+  (Supabase Auth: e-mail e hash da senha).
 - **O PDF original nunca sai do navegador.** Só o texto extraído (por página) vai ao Worker.
 - **Chave da OpenAI só como Secret** (`OPENAI_API_KEY`). Nunca no frontend, repositório ou logs.
 - Chamadas à OpenAI sempre com `store: false`, sem tools, saída em JSON Schema estrito.
@@ -93,10 +94,14 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   separa **sozinho** os extratos desses proprietários e os recibos só deles (`separarRepresados`; recibo de contrato
   dividido com quem não é represado fica nos dois), guarda os dados lidos (nunca o PDF) na tabela `represados` e tira da
   conferência do dia. Se o banco falhar, a conferência não começa. Cópia idêntica não é guardada duas vezes. Projeto
-  Supabase separado, só para isso (o cron evita a pausa do plano grátis); todas as usuárias veem os mesmos. A página
+  Supabase separado (usado só pelos represados e pelo login; o cron evita a pausa do plano grátis); todas as usuárias veem os mesmos. A página
   "Represados" não tem upload: lista cada nome com os dados guardados separados por contrato, e a conferência roda
   **um proprietário por vez** (nunca todos juntos); "Concluir e apagar do banco" apaga só os documentos daquele nome. Acesso só pelo Worker (`worker/represados.ts`, Secrets
-  `SUPABASE_URL`/`SUPABASE_KEY`, RLS sem políticas). Cron a cada 3 dias lê a tabela para o Supabase grátis não pausar.
+  `SUPABASE_URL`/`SUPABASE_KEY`, chave `sb_secret_…` só no header `apikey`). RLS ligado sem políticas, sem permissão para
+  `anon`/`authenticated`; o projeto não dá acesso automático às tabelas novas, então `service_role` recebe só o necessário
+  (`supabase/represados.sql`). Cron a cada 3 dias lê a tabela para o Supabase grátis não pausar.
+- Secrets por linha de comando (11/2026): gravar com `printf '%s' valor | npx wrangler secret put NOME` ou digitando no
+  prompt; `"valor" | ...` no PowerShell acrescenta quebra de linha e quebrou a `SUPABASE_URL` (login e represados com erro 500).
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
 
 ## Pendências (aguardando o negócio)
@@ -111,7 +116,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 ## Estrutura
 
 - `src/` frontend (`pdf/extrair.ts` leitura local, `pdf/juntar.ts` Juntar PDF, `nido/ler.ts` + `nido/conferir.ts` conferência e totais, `api.ts`, `components/` com resultado e relatório em `Resultado.tsx`)
-- `worker/` API (`auth.ts` sessão + lista, `login.ts` nome/senha, `sessao.ts` cookies assinados, `openai.ts`, `index.ts` rotas/validação/rate limit)
-- `shared/` contrato e limites
+- `worker/` API (`auth.ts` sessão + usuária ativa no Supabase Auth, `login.ts` e-mail/senha no Supabase Auth, `represados.ts`, `sessao.ts` cookies assinados, `openai.ts`, `index.ts` rotas/validação/rate limit)
+- `shared/` contrato, limites e `normalizarNome`
+- `supabase/represados.sql` tabelas e permissões do Supabase (rodar no SQL Editor ou pelo MCP)
 
 Atualize este arquivo e ARCHITECTURE/SECURITY/PRIVACY quando decisões mudarem.
