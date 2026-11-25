@@ -85,25 +85,18 @@ O servidor (Worker) só cuida do login e de entregar o site. Detalhes em [ARCHIT
 
 ## Gerenciar acessos
 
-Feito pelo terminal, na pasta do projeto, por quem administra a ferramenta (precisa estar logado na Cloudflare:
-`npx wrangler login`).
+Pelo painel do Supabase (projeto dos represados), em **Authentication → Users**. Vale na hora, sem publicar o app.
 
-| Situação | Comando |
+| Situação | Onde |
 |---|---|
-| Nova pessoa | `npm run usuarios -- adicionar "Nome Sobrenome"` |
-| Esqueceu a senha ou a senha vazou | `npm run usuarios -- nova-senha "Nome Sobrenome"` |
-| Tirar o acesso | `npm run usuarios -- remover "Nome Sobrenome"` |
-| Ver quem tem acesso | `npm run usuarios -- listar` |
-| **Aplicar as mudanças no site** | `npm run usuarios -- publicar` (vale na hora, sem publicar o app) |
-| Aplicar só no computador (teste) | `npm run usuarios -- publicar --local` (grava no `.dev.vars`) |
-| Ver a ajuda | `npm run usuarios -- ajuda` |
+| Nova pessoa | **Add user → Create new user**: e-mail + senha, com **Auto Confirm User** marcado. Entregue a senha em particular |
+| Esqueceu a senha ou a senha vazou | Abra a usuária → troque a senha |
+| Tirar o acesso | Apague a usuária (ou bloqueie): perde o acesso na próxima ação |
+| Desconectar todo mundo | Trocar o `SESSION_SECRET` (`npx wrangler secret put SESSION_SECRET`) |
 
-- Depois de `adicionar`, `nova-senha` ou `remover`, rode sempre o `publicar`: sem ele nada muda no site.
-- A senha aparece **uma única vez** no terminal: entregue em particular e peça que a pessoa salve no navegador.
-- `usuarios.local.json` guarda só nomes e hashes (nunca senhas) e fica fora do Git. Faça uma cópia de segurança;
-  se ele for perdido, é preciso gerar senha nova para todos.
-- Para desconectar todo mundo de uma vez, troque o `SESSION_SECRET` (`npx wrangler secret put SESSION_SECRET`).
-- Cabem cerca de 50 usuários. A sessão dura 8 horas.
+- O cadastro aberto precisa ficar **desligado** (Authentication → Sign In / Providers → *Allow new users to sign up*):
+  com ele ligado, qualquer pessoa com o endereço do Supabase poderia criar uma conta e entrar.
+- A sessão dura 8 horas. Se o Supabase estiver fora do ar, ninguém entra.
 
 ## Comandos do projeto
 
@@ -118,7 +111,6 @@ Requisitos: Node.js 22+ (testado com 24) e conta Cloudflare (Workers, plano grat
 | `npm run build` | Checagem de tipos + build de produção em `dist/` |
 | `npm run preview` | Build + servidor local com a versão de produção |
 | `npm run deploy` | Typecheck + testes + build + **publicação no site** |
-| `npm run usuarios -- <comando>` | Gerencia os acessos (tabela acima) |
 | `npm run cf-typegen` | Regenera os tipos do Worker após mudar o `wrangler.jsonc` |
 
 ### Rodar no computador
@@ -147,7 +139,7 @@ npm run deploy
 
 O comando só publica se a checagem de tipos e os testes passarem. Passo a passo da primeira publicação em
 [docs/DEPLOY-TESTE.md](docs/DEPLOY-TESTE.md) e checklist em [SECURITY.md](SECURITY.md#checklist-de-implantação).
-Secrets na Cloudflare: `SESSION_SECRET` e `USUARIOS`.
+Secrets na Cloudflare: `SESSION_SECRET`, `SUPABASE_URL` e `SUPABASE_KEY`.
 A rota de IA (`OPENAI_API_KEY`) continua no Worker, mas o app não a usa hoje. Nenhum segredo vai para o Git.
 
 ## Estrutura do código
@@ -158,8 +150,7 @@ A rota de IA (`OPENAI_API_KEY`) continua no Worker, mas o app não a usa hoje. N
 | `src/pdf/` | `extrair.ts` (leitura do PDF no navegador) e `juntar.ts` (Juntar PDF) |
 | `src/nido/` | `ler.ts` (texto do NIDO → registros) e `conferir.ts` (regras e totais), com os testes ao lado |
 | `worker/` | Servidor na Cloudflare: login, sessão e rotas |
-| `shared/` | Limites, contrato e geração de senha, usados pelo site e pelo Worker |
-| `scripts/` | `usuarios.ts` (gestão de acessos) |
+| `shared/` | Limites e contrato, usados pelo site e pelo Worker |
 | `docs/` | Regras da conferência e guia de publicação |
 
 Limites por arquivo: 20 MB e 1.000 páginas (cabe um PDF juntado com ~400 extratos). Não há limite de quantidade de arquivos.

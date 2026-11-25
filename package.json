@@ -10,7 +10,6 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "cf-typegen": "wrangler types",
-    "usuarios": "node scripts/usuarios.ts",
     "deploy": "npm run typecheck && npm test && vite build && wrangler deploy"
   },
   "dependencies": {

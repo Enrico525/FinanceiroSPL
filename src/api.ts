@@ -2,14 +2,14 @@ import type { CodigoErro, PedidoGuardar, Represado } from "../shared/contrato";
 
 const MENSAGENS: Record<CodigoErro, string> = {
   nao_autenticado: "Sua sessão terminou. Recarregue a página para entrar novamente.",
-  credenciais_invalidas: "Nome ou senha incorretos.",
+  credenciais_invalidas: "E-mail ou senha incorretos.",
   requisicao_invalida: "A solicitação não pôde ser processada. Tente novamente.",
   texto_muito_extenso: "Os documentos têm texto demais para uma única análise.",
   limite_requisicoes: "Muitas tentativas em pouco tempo. Aguarde um minuto e tente novamente.",
   timeout: "A análise demorou demais e foi interrompida. Tente novamente.",
   falha_ia: "O serviço de análise está indisponível no momento. Tente novamente mais tarde.",
   resposta_invalida: "A análise retornou um resultado inválido. Repita o procedimento.",
-  falha_banco: "Não foi possível acessar os represados no banco de dados. Tente novamente.",
+  falha_banco: "Não foi possível acessar o banco de dados. Tente novamente.",
   interno: "Ocorreu um erro inesperado. Tente novamente.",
 };
 
@@ -39,8 +39,8 @@ async function chamar<T>(caminho: string, init?: RequestInit): Promise<T> {
 
 export const buscarUsuario = () => chamar<{ usuario: string; desenvolvimento: boolean }>("/api/eu");
 
-export const entrar = (nome: string, senha: string) =>
-  chamar<{ usuario: string }>("/auth/entrar", { method: "POST", headers: DO_APP, body: JSON.stringify({ nome, senha }) });
+export const entrar = (email: string, senha: string) =>
+  chamar<{ usuario: string }>("/auth/entrar", { method: "POST", headers: DO_APP, body: JSON.stringify({ email, senha }) });
 
 export const sair = () => chamar<{ ok: true }>("/auth/sair", { method: "POST", headers: DO_APP, body: "{}" });
 

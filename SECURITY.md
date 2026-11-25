@@ -4,15 +4,15 @@
 
 | Área | Controle | Onde |
 |---|---|---|
-| Login | Nome + senha **gerada** (16 caracteres aleatórios, ~79 bits); só o hash SHA-256 fica no Secret `USUARIOS`; comparação em tempo constante; mesma resposta para nome ou senha errados | `worker/login.ts`, `shared/credenciais.ts` |
+| Login | E-mail + senha conferidos no Supabase Auth pelo Worker (chave secreta só no Worker; senha com bcrypt no Supabase); mesma resposta para e-mail ou senha errados; cadastro aberto desligado no Supabase | `worker/login.ts` |
 | Sessão | JWT HS256 em cookie `__Host-sessao` (HttpOnly, Secure, SameSite=Strict), 8 h | `worker/sessao.ts` |
-| Autorização | Usuário precisa estar em `USUARIOS` em **toda** requisição (revogação imediata) | `worker/auth.ts` (+ testes) |
-| Força bruta | Senha de ~79 bits + login limitado por IP e por nome (10/min) + CSRF (Origin e header do app) | `worker/index.ts` |
+| Autorização | Usuária precisa existir e não estar bloqueada no Supabase Auth em **toda** requisição (revogação imediata; Supabase fora do ar = sem acesso) | `worker/auth.ts` (+ testes) |
+| Força bruta | Login limitado por IP e por e-mail (10/min) + limite do próprio Supabase Auth + CSRF (Origin e header do app) | `worker/index.ts`, `worker/login.ts` |
 | Dev | Login simulado só com `AMBIENTE=desenvolvimento` **e** host `localhost` | `worker/auth.ts` (+ testes) |
 | CSRF | Exige `Origin` igual, `X-Requested-With` e `Content-Type: application/json` | `worker/index.ts` |
 | Abuso/custo | Rate limiting por usuário (10/min), limites de tamanho, `max_output_tokens`, timeout | `wrangler.jsonc`, `worker/` |
 | Validação | Entrada e saída validadas com zod (objetos estritos) | `shared/contrato.ts` |
-| Segredos | `OPENAI_API_KEY`, `USUARIOS`, `SESSION_SECRET` só como Secret; `usuarios.local.json` (só hashes) fora do Git; `.dev.vars`/`.env` no `.gitignore` | — |
+| Segredos | `OPENAI_API_KEY`, `SESSION_SECRET`, `SUPABASE_KEY` só como Secret; `.dev.vars`/`.env` no `.gitignore` | — |
 | Cache | `Cache-Control: no-store` em toda a API | `worker/index.ts` |
 | Cabeçalhos | CSP restrita, HSTS, nosniff, Referrer-Policy, anti-clickjacking | `public/_headers` |
 | XSS | Conteúdo de PDF/IA renderizado só como texto pelo React | `src/components/` |
@@ -24,7 +24,7 @@
 
 - [ ] Represados: rodar `supabase/represados.sql` no projeto Supabase e gravar `SUPABASE_URL` e `SUPABASE_KEY` com `npx wrangler secret put`.
 
-- [ ] `npm run usuarios -- listar` mostra só as pessoas autorizadas; lista publicada ([docs/DEPLOY-TESTE.md](docs/DEPLOY-TESTE.md)).
+- [ ] Supabase → Authentication → Users mostra só as pessoas autorizadas, e *Allow new users to sign up* está desligado.
 - [ ] Senhas entregues por canal privado; ninguém compartilha a própria senha.
 - [ ] `SESSION_SECRET` (≥ 32 caracteres aleatórios) via `wrangler secret put`.
 - [ ] Sem login, `/api/eu` retorna 401; senha errada é recusada.
