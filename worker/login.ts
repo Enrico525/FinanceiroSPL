@@ -1,30 +1,41 @@
-import { hashSenha, iguais, lerUsuarios, normalizarNome } from "../shared/credenciais";
 import type { Ambiente } from "./ambiente";
 import { cookieSessao, criarSessao } from "./sessao";
 import { erro, json } from "./resposta";
 
-const HASH_FALSO = "0".repeat(64);
+type AmbienteSupabase = Pick<Ambiente, "SUPABASE_URL" | "SUPABASE_KEY">;
 
-/** POST /auth/entrar { nome, senha } → cria a sessão. Mensagem igual para nome ou senha errados. */
+/** Chamada ao Supabase Auth com a chave secreta (só no header apikey: a chave nova não é JWT). */
+export const supabaseAuth = (env: AmbienteSupabase, caminho: string, init: RequestInit = {}) =>
+  fetch(`${env.SUPABASE_URL}/auth/v1/${caminho}`, {
+    ...init,
+    headers: { apikey: env.SUPABASE_KEY, "Content-Type": "application/json", ...init.headers },
+  });
+
+/** POST /auth/entrar { email, senha } → confere no Supabase Auth e cria a sessão. Mensagem igual para e-mail ou senha errados. */
 export async function entrar(request: Request, env: Ambiente): Promise<Response> {
-  let corpo: { nome?: unknown; senha?: unknown };
+  let corpo: { email?: unknown; senha?: unknown };
   try {
     corpo = await request.json();
   } catch {
     return erro("requisicao_invalida");
   }
-  const nome = normalizarNome(String(corpo?.nome ?? "")).slice(0, 100);
-  const senha = String(corpo?.senha ?? "").slice(0, 100);
-  if (!nome || !senha) return erro("credenciais_invalidas");
+  const email = String(corpo?.email ?? "").trim().toLowerCase().slice(0, 200);
+  const senha = String(corpo?.senha ?? "").slice(0, 200);
+  if (!email || !senha) return erro("credenciais_invalidas");
 
-  // Limite também por nome: impede tentar muitas senhas contra a mesma pessoa a partir de vários IPs.
-  if (!(await env.LIMITADOR.limit({ key: `login:${nome}` })).success) return erro("limite_requisicoes");
+  // Limite também por e-mail: impede tentar muitas senhas contra a mesma pessoa a partir de vários IPs.
+  if (!(await env.LIMITADOR.limit({ key: `login:${email}` })).success) return erro("limite_requisicoes");
+  if (!env.SUPABASE_URL || !env.SUPABASE_KEY) return erro("falha_banco");
 
-  const usuarios = lerUsuarios(env.USUARIOS);
-  const existe = Object.hasOwn(usuarios, nome);
-  const confere = iguais(await hashSenha(senha), existe ? usuarios[nome] : HASH_FALSO);
-  if (!existe || !confere) return erro("credenciais_invalidas");
+  const r = await supabaseAuth(env, "token?grant_type=password", { method: "POST", body: JSON.stringify({ email, password: senha }) });
+  // 400 = e-mail/senha errados (ou e-mail não confirmado); o resto é falha do Supabase.
+  if (r.status === 400) return erro("credenciais_invalidas");
+  if (r.status === 429) return erro("limite_requisicoes");
+  if (!r.ok) return erro("falha_banco");
+  const { user } = (await r.json()) as { user?: { id?: unknown; email?: unknown } };
+  if (typeof user?.id !== "string") return erro("falha_banco");
 
-  const token = await criarSessao(nome, env);
-  return json({ usuario: nome }, 200, { "Set-Cookie": cookieSessao(token) });
+  // A sessão do Supabase é descartada: o app usa o próprio cookie, com o id da usuária.
+  const token = await criarSessao(user.id, env);
+  return json({ usuario: typeof user.email === "string" ? user.email : email }, 200, { "Set-Cookie": cookieSessao(token) });
 }

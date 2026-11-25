@@ -1,5 +1,5 @@
 // Sessão em cookie HttpOnly com token assinado (HS256). Sem banco de dados:
-// a validade vem da assinatura + expiração, e a autorização do Secret USUARIOS.
+// a validade vem da assinatura + expiração, e a autorização do Supabase Auth (worker/auth.ts).
 import { jwtVerify, SignJWT } from "jose";
 import type { Ambiente } from "./ambiente";
 

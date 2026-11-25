@@ -13,15 +13,21 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Chamadas à OpenAI sempre com `store: false`, sem tools, saída em JSON Schema estrito.
 - **Logs só com categorias de erro.** Nunca corpo da requisição, texto, resposta da IA ou mensagens de exceção.
 - Conteúdo de PDF e da IA é **não confiável**: renderizar só como texto (sem `dangerouslySetInnerHTML`, sem markdown).
-- Autorização validada no Worker em toda requisição (cookie de sessão assinado + usuário ainda cadastrado em `USUARIOS`).
+- Autorização validada no Worker em toda requisição (cookie de sessão assinado + usuária ainda ativa no Supabase Auth).
 - A IA não é autoridade: cálculos e conferências determinísticos ficam no código.
 - Não inventar regras de negócio: perguntar.
 
 ## Decisões tomadas
 
 - Stack: React + Vite + TypeScript, Cloudflare Worker com Static Assets (uma app, mesmo domínio).
-- Autenticação: **nome + senha gerada** pelo administrador, feita pelo próprio Worker (`worker/login.ts`). Sem Google, Auth0 ou Cloudflare Access (o usuário não pode usar Zero Trust). Senhas são aleatórias (16 caracteres, ~79 bits, `shared/credenciais.ts`), por isso SHA-256 simples basta — **nunca permitir senha escolhida por pessoa sem trocar para hash lento**. Lista `nome → hash` no Secret `USUARIOS`, gerida por `npm run usuarios` (`scripts/usuarios.ts`; arquivo local `usuarios.local.json` fora do Git). Sessão = JWT HS256 em cookie `__Host-sessao` (HttpOnly, Secure, SameSite=Strict, 8 h), assinado com `SESSION_SECRET`.
-- Sem área admin no app: acessos gerenciados pelo script + `publicar` (vale na hora). Sem “esqueci a senha” automático; sem 2FA (pode ser acrescentado com TOTP).
+- Autenticação (11/2026): **e-mail + senha no Supabase Auth** (mesmo projeto dos represados), conferidos pelo Worker
+  (`worker/login.ts`, grant `password` com a chave secreta). A sessão do Supabase é descartada: o app cria o próprio
+  JWT HS256 com o id da usuária no cookie `__Host-sessao` (HttpOnly, Secure, SameSite=Strict, 8 h), assinado com
+  `SESSION_SECRET`. Em toda requisição o Worker consulta `auth/v1/admin/users/<id>` (`worker/auth.ts`): apagada ou
+  bloqueada perde o acesso na hora; Supabase fora do ar = sem acesso. Usuárias criadas pelo administrador no painel
+  (senha definida por ele, hash bcrypt do Supabase); **cadastro aberto desligado** no Supabase. Sem Google, Auth0 ou
+  Cloudflare Access (o usuário não pode usar Zero Trust). Substituiu o login nome + senha gerada do Secret `USUARIOS`.
+- Sem área admin no app: acessos gerenciados no painel do Supabase (Authentication → Users, vale na hora). Sem “esqueci a senha” automático; sem 2FA (pode ser acrescentado com TOTP).
 - Assets estáticos são públicos (não contêm dados); só a API exige login.
 - Contrato frontend↔Worker em `shared/contrato.ts` (zod). O mesmo schema vira o JSON Schema enviado à OpenAI.
 - Conferência de referências: todo `trecho_literal` citado pela IA é procurado na página indicada (`src/conferencia.ts`).

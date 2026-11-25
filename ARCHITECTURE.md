@@ -12,10 +12,10 @@ Navegador (React)
         │ HTTPS · só login/sessão (a conferência não envia dados)
         ▼
 Cloudflare Worker (Static Assets + /api/* + /auth/*)
-  ├─ /auth/*: login por nome + senha (hash no Secret USUARIOS), sessão em cookie assinado
-  ├─ Em toda chamada /api: valida cookie (HS256) + usuário ainda em USUARIOS
+  ├─ /auth/*: login por e-mail + senha conferidos no Supabase Auth, sessão em cookie assinado
+  ├─ Em toda chamada /api: valida cookie (HS256) + usuária ainda ativa no Supabase Auth
   ├─ CSRF: Origin + X-Requested-With + Content-Type JSON
-  ├─ Rate limiting (por usuário na API; por IP e por nome no login)
+  ├─ Rate limiting (por usuário na API; por IP e por e-mail no login)
   ├─ Valida corpo (zod, limites de páginas/caracteres)
   └─ OpenAI Responses API (store:false, JSON Schema estrito, timeout 120 s)
         ▼
@@ -35,12 +35,12 @@ OpenAI
 
 Erros da API: `{ "erro": CodigoErro }` (ver `shared/contrato.ts`). O frontend traduz para pt-BR.
 
-## Autenticação sem banco de dados
+## Autenticação
 
-- **Credencial:** senha aleatória gerada pelo administrador (`npm run usuarios`); só o hash SHA-256 vai para o Secret `USUARIOS`.
-- **Autorização:** o usuário precisa continuar em `USUARIOS` em toda requisição.
-- **Sessão:** JWT HS256 no cookie `__Host-sessao` (HttpOnly, Secure, SameSite=Strict), assinado com o Secret `SESSION_SECRET`. Expira em 8 h.
-- **Revogação:** `npm run usuarios -- remover` + `publicar` (imediato) ou trocar `SESSION_SECRET` (derruba todos).
+- **Credencial:** e-mail + senha no Supabase Auth, criados pelo administrador no painel (cadastro aberto desligado).
+- **Autorização:** em toda requisição o Worker confere no Supabase (`admin/users/<id>`) se a usuária existe e não está bloqueada.
+- **Sessão:** JWT HS256 com o id da usuária no cookie `__Host-sessao` (HttpOnly, Secure, SameSite=Strict), assinado com o Secret `SESSION_SECRET`. Expira em 8 h.
+- **Revogação:** apagar ou bloquear a usuária no painel (imediato) ou trocar `SESSION_SECRET` (derruba todos).
 - Os arquivos estáticos (HTML/JS/CSS/logo) são públicos e não contêm dados; tudo que tem dado passa pela API.
 
 ## Fluxo da conferência (todo no navegador)

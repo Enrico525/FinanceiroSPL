@@ -18,21 +18,9 @@ Trocar essa chave depois **desconecta todo mundo**.
 
 ## 2. Cadastrar as pessoas
 
-Para cada pessoa:
-
-```bash
-npm run usuarios -- adicionar "Maria Silva"
-```
-
-A senha aparece **uma única vez** no terminal (ex.: `K7QM-2XPA-9TRF-4WHN`). Entregue à pessoa por um
-canal privado (pessoalmente ou mensagem direta, nunca em grupo) e peça que ela salve no navegador ou num
-gerenciador de senhas. **Eu não devo ver as senhas:** rode esse comando você mesmo.
-
-Depois de cadastrar todo mundo, envie a lista para a Cloudflare (vale na hora, sem deploy):
-
-```bash
-npm run usuarios -- publicar
-```
+No painel do Supabase: **Authentication → Users → Add user → Create new user**, com e-mail, senha e
+**Auto Confirm User** marcado. Entregue a senha por um canal privado. Antes, desligue o cadastro aberto em
+**Authentication → Sign In / Providers → Allow new users to sign up**.
 
 ## 3. Publicar o app
 
@@ -42,28 +30,30 @@ npm run deploy
 
 ## 4. Verificar (janela anônima)
 
-- [ ] `/` → tela de login com Nome e Senha
+- [ ] `/` → tela de login com E-mail e Senha
 - [ ] `/api/eu` → `{"erro":"nao_autenticado"}`
-- [ ] Nome e senha corretos → área interna, nome no topo
-- [ ] Senha errada → “Nome ou senha incorretos.”
+- [ ] E-mail e senha corretos → área interna, e-mail no topo
+- [ ] Senha errada → “E-mail ou senha incorretos.”
 - [ ] **Sair** → volta para a tela de login
 - [ ] Selecionar dois PDFs fictícios → páginas e situação exibidas
 
 ## Gerenciar acessos
 
-| Situação | Comando (depois: `npm run usuarios -- publicar`) |
-|---|---|
-| Nova pessoa | `npm run usuarios -- adicionar "Nome"` |
-| Esqueceu a senha / senha vazou | `npm run usuarios -- nova-senha "Nome"` |
-| Tirar o acesso | `npm run usuarios -- remover "Nome"` (efeito imediato após publicar) |
-| Ver quem tem acesso | `npm run usuarios -- listar` |
-| Desconectar todo mundo | trocar o `SESSION_SECRET` |
+Pelo painel do Supabase (projeto dos represados), em **Authentication → Users**. Vale na hora, sem publicar o app.
 
-O arquivo `usuarios.local.json` guarda **só nomes e hashes** (nunca senhas) e fica fora do Git.
-Se ele for perdido, basta gerar senhas novas para todos.
+| Situação | Onde |
+|---|---|
+| Nova pessoa | **Add user → Create new user**: e-mail + senha, com **Auto Confirm User** marcado. Entregue a senha em particular |
+| Esqueceu a senha ou a senha vazou | Abra a usuária → troque a senha |
+| Tirar o acesso | Apague a usuária (ou bloqueie): perde o acesso na próxima ação |
+| Desconectar todo mundo | Trocar o `SESSION_SECRET` (`npx wrangler secret put SESSION_SECRET`) |
+
+- O cadastro aberto precisa ficar **desligado** (Authentication → Sign In / Providers → *Allow new users to sign up*):
+  com ele ligado, qualquer pessoa com o endereço do Supabase poderia criar uma conta e entrar.
+- A sessão dura 8 horas. Se o Supabase estiver fora do ar, ninguém entra.
 
 ## Testar o login localmente
 
 1. No `.dev.vars`, deixe `DEV_EMAIL=` vazio e preencha `SESSION_SECRET`.
-2. `npm run usuarios -- adicionar "Teste"` e `npm run usuarios -- publicar --local`
+2. Preencha `SUPABASE_URL` e `SUPABASE_KEY` de um projeto Supabase de teste e crie uma usuária nele
 3. `npm run dev`

@@ -11,7 +11,7 @@ export function Login({ aoEntrar }: { aoEntrar: (usuario: string) => void }) {
     setEnviando(true);
     setErro(null);
     try {
-      const { usuario } = await entrar(String(dados.get("nome")), String(dados.get("senha")));
+      const { usuario } = await entrar(String(dados.get("email")), String(dados.get("senha")));
       aoEntrar(usuario);
     } catch (err) {
       setErro(err instanceof ErroApi ? err.message : "Não foi possível entrar. Tente novamente.");
@@ -27,8 +27,8 @@ export function Login({ aoEntrar }: { aoEntrar: (usuario: string) => void }) {
         <p className="subtitulo">Acesso restrito a colaboradores autorizados.</p>
 
         <label className="campo">
-          Nome
-          <input name="nome" autoComplete="username" required maxLength={100} disabled={enviando} />
+          E-mail
+          <input name="email" type="email" autoComplete="username" required maxLength={200} disabled={enviando} />
         </label>
         <label className="campo">
           Senha
@@ -37,7 +37,7 @@ export function Login({ aoEntrar }: { aoEntrar: (usuario: string) => void }) {
             type="password"
             autoComplete="current-password"
             required
-            maxLength={100}
+            maxLength={200}
             disabled={enviando}
           />
         </label>
