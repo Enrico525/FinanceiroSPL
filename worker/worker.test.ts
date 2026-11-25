@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { LIMITES, PedidoAnalise } from "../shared/contrato";
 import { gerarSenha, hashSenha, normalizarNome, normalizarSenha } from "../shared/credenciais";
 import type { Ambiente } from "./ambiente";
@@ -19,6 +19,8 @@ async function ambiente(extra: Partial<Ambiente> = {}): Promise<Ambiente> {
     USUARIOS: JSON.stringify({ "maria silva": await hashSenha(SENHA), joao: await hashSenha(gerarSenha()) }),
     OPENAI_MODEL: "",
     OPENAI_API_KEY: "",
+    SUPABASE_URL: "https://banco.exemplo.supabase.co",
+    SUPABASE_KEY: "sb_secret_teste",
     LIMITADOR: { limit: async () => ({ success: true }) } as unknown as RateLimit,
     ...extra,
   };
@@ -171,5 +173,63 @@ describe("resposta da OpenAI", () => {
   it("gera JSON Schema compatível com o modo estrito", () => {
     expect(SCHEMA_RESULTADO).toMatchObject({ type: "object", additionalProperties: false });
     expect(SCHEMA_RESULTADO).not.toHaveProperty("$schema");
+  });
+});
+
+describe("represados (Supabase)", () => {
+  const recibo = { arquivo: "r.pdf", pagina: 1, contrato: "1", locatario: "Fulano", locador: "Beltrano", endereco: "Rua A", vencimento: "10/11/2026", linhas: [], pago: 100 };
+  const pedir = async (caminho: string, corpo?: unknown) => {
+    const env = await ambiente();
+    const token = await criarSessao("maria silva", env);
+    const headers: Record<string, string> = { Cookie: `${COOKIE_SESSAO}=${token}`, Origin: URL_APP, "X-Requested-With": "plataforma-financeira", "Content-Type": "application/json" };
+    return worker.fetch(new Request(`${URL_APP}${caminho}`, corpo === undefined ? { headers } : { method: "POST", headers, body: JSON.stringify(corpo) }), env);
+  };
+  const chamadas: { url: string; init: RequestInit }[] = [];
+  const fetchOriginal = globalThis.fetch;
+  const falsoSupabase = (status = 200) => {
+    chamadas.length = 0;
+    globalThis.fetch = (async (url: string, init: RequestInit) => {
+      chamadas.push({ url, init });
+      return new Response(status === 200 ? "[]" : "x", { status });
+    }) as typeof fetch;
+  };
+  afterEach(() => (globalThis.fetch = fetchOriginal));
+
+  it("guarda com o usuário e a chave só no apikey", async () => {
+    falsoSupabase();
+    const r = await pedir("/api/represados", { recibos: [recibo], repasses: [] });
+    expect(r.status).toBe(200);
+    expect(chamadas[0].url).toBe("https://banco.exemplo.supabase.co/rest/v1/represados");
+    expect(JSON.parse(chamadas[0].init.body as string)).toEqual([{ tipo: "recibo", dados: recibo, guardado_por: "maria silva" }]);
+    expect((chamadas[0].init.headers as Record<string, string>).apikey).toBe("sb_secret_teste");
+  });
+
+  it("recusa dados fora do formato e lote vazio, sem chamar o banco", async () => {
+    falsoSupabase();
+    expect((await pedir("/api/represados", { recibos: [{ ...recibo, extra: 1 }], repasses: [] })).status).toBe(400);
+    expect((await pedir("/api/represados", { recibos: [], repasses: [] })).status).toBe(400);
+    expect((await pedir("/api/represados/apagar", { ids: ["1); drop"] })).status).toBe(400);
+    expect(chamadas).toHaveLength(0);
+  });
+
+  it("apaga só os ids pedidos e lista", async () => {
+    falsoSupabase();
+    expect((await pedir("/api/represados/apagar", { ids: [3, 7] })).status).toBe(200);
+    expect(chamadas[0].url).toBe("https://banco.exemplo.supabase.co/rest/v1/represados?id=in.(3,7)");
+    expect(chamadas[0].init.method).toBe("DELETE");
+    expect(await (await pedir("/api/represados")).json()).toEqual({ itens: [], nomes: [] });
+    expect(chamadas.map((c) => c.url).slice(1)).toEqual([
+      "https://banco.exemplo.supabase.co/rest/v1/represados?select=id,tipo,dados&order=id",
+      "https://banco.exemplo.supabase.co/rest/v1/represados_nomes?select=nome",
+    ]);
+  });
+
+  it("falha do banco vira falha_banco; sem login não chega ao banco", async () => {
+    falsoSupabase(500);
+    expect(await (await pedir("/api/represados")).json()).toEqual({ erro: "falha_banco" });
+    chamadas.length = 0;
+    const r = await worker.fetch(new Request(`${URL_APP}/api/represados`), await ambiente());
+    expect(r.status).toBe(401);
+    expect(chamadas).toHaveLength(0);
   });
 });

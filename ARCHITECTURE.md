@@ -24,6 +24,8 @@ OpenAI
 
 ## Endpoints
 
+- `GET /api/represados`, `POST /api/represados` (guardar), `POST /api/represados/apagar` (`{ ids }`): represados no Supabase (`worker/represados.ts`, REST sem biblioteca). Cron a cada 3 dias faz uma leitura mínima para o projeto grátis não pausar.
+
 | Rota | Método | Descrição |
 |---|---|---|
 | `/auth/entrar` | POST | `{ nome, senha }` → cria a sessão (8 h). Erro igual para nome ou senha errados |

@@ -21,11 +21,13 @@ banco, agência e conta). Nome do usuário para login.
 | Cloudflare Worker | Nenhum dado dos documentos (a conferência roda no navegador) | — |
 | Cookie de sessão (navegador) | Nome do usuário, assinado | Até 8 h ou até sair |
 | OpenAI | Nenhum (rota `/api/analisar` existe, mas o app não a usa) | — |
-| Banco de dados próprio | Nenhum | — |
+| Supabase (tabela `represados`) | Só os **represados**: dados lidos dos recibos e extratos (nomes, CPF/CNPJ, valores, endereço, dados bancários) e o nome de quem guardou, mais a lista de nomes dos proprietários represados. O PDF não. | Até a pessoa concluir a conferência daquele proprietário (apaga na hora) ⚖️ |
 
 Logs técnicos contêm apenas categoria de erro e rota, sem conteúdo.
 
 ## Fornecedores
+
+- **Supabase**: guarda os represados (projeto Supabase separado, só para isso). Acesso só pelo Worker, com chave secreta; RLS ligado sem políticas. ⚖️ contrato/DPA com o Supabase.
 
 - **Cloudflare** — hospedagem. Processamento fora do Brasil. ⚖️
 - **OpenAI** — nenhum dado é enviado hoje (a rota existe, mas o app não a usa). Se voltar a ser usada:

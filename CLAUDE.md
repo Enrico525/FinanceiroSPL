@@ -7,6 +7,7 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 ## Regras inegociáveis
 
 - **Sem banco de dados e sem persistência** de PDFs, textos, resultados ou histórico. Nada de D1, R2, KV, IndexedDB, localStorage, sessionStorage.
+  **Única exceção: os represados** (ver Decisões), no Supabase, só os dados lidos e só até concluir.
 - **O PDF original nunca sai do navegador.** Só o texto extraído (por página) vai ao Worker.
 - **Chave da OpenAI só como Secret** (`OPENAI_API_KEY`). Nunca no frontend, repositório ou logs.
 - Chamadas à OpenAI sempre com `store: false`, sem tools, saída em JSON Schema estrito.
@@ -81,6 +82,15 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   boletos diferentes (inquilino que estava devendo, acordo: 14990).
 - Aviso de versão nova (11/2026): a cada 30 s e ao voltar para a aba, o app compara o `/assets/index-*.js` do
   index.html do servidor com o carregado (`AvisoAtualizacao.tsx`) e mostra "Atualizar agora". Atualizar limpa a tela.
+- Represados (11/2026): ~11 proprietários pedem para segurar os repasses. A lista de nomes fica no Supabase (tabela
+  `represados_nomes`, editada no painel; nomes reais nunca no código). Ao "Conferir" (e "Analisar de novo"), o app
+  separa **sozinho** os extratos desses proprietários e os recibos só deles (`separarRepresados`; recibo de contrato
+  dividido com quem não é represado fica nos dois), guarda os dados lidos (nunca o PDF) na tabela `represados` e tira da
+  conferência do dia. Se o banco falhar, a conferência não começa. Cópia idêntica não é guardada duas vezes. Projeto
+  Supabase separado, só para isso (o cron evita a pausa do plano grátis); todas as usuárias veem os mesmos. A página
+  "Represados" não tem upload: lista cada nome com os dados guardados separados por contrato, e a conferência roda
+  **um proprietário por vez** (nunca todos juntos); "Concluir e apagar do banco" apaga só os documentos daquele nome. Acesso só pelo Worker (`worker/represados.ts`, Secrets
+  `SUPABASE_URL`/`SUPABASE_KEY`, RLS sem políticas). Cron a cada 3 dias lê a tabela para o Supabase grátis não pausar.
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
 
 ## Pendências (aguardando o negócio)

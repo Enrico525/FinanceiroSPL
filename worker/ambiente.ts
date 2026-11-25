@@ -11,6 +11,10 @@ export interface Ambiente {
   OPENAI_MODEL: string;
   /** Secret */
   OPENAI_API_KEY: string;
+  /** Secret: https://<projeto>.supabase.co (tabela em supabase/represados.sql). */
+  SUPABASE_URL: string;
+  /** Secret: chave secreta do Supabase (sb_secret_… ou service_role). Só o Worker usa. */
+  SUPABASE_KEY: string;
   DEV_EMAIL?: string;
   LIMITADOR: RateLimit;
 }

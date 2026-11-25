@@ -26,7 +26,8 @@ export type Caso = {
 
 export const reais = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const simples = (s: string) =>
+/** Sem acento, minúsculas: para comparar nomes. */
+export const nomeSimples = (s: string) =>
   s
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -73,7 +74,7 @@ export function taxaAdmEsperada(linhas: LinhaRepasse[], taxa: number): number {
 type Modo = "normal" | "special" | "pre-cadastro";
 
 function regraSituacao(situacao: string): { modo: Modo | null; manual: string | null } {
-  const s = simples(situacao);
+  const s = nomeSimples(situacao);
   if (s.includes("juridico")) return { modo: null, manual: "Situação Jurídico: analisar manualmente." };
   if (s === "normal" || s.includes("iptupginquilino") || s.includes("garantido")) return { modo: "normal", manual: null };
   if (s.includes("condpginquilino"))
@@ -148,8 +149,8 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
   if (modo === "pre-cadastro") {
     const igual =
       recibo &&
-      simples(recibo.locador) === simples(r0.proprietario) &&
-      simples(recibo.endereco) === simples(r0.endereco);
+      nomeSimples(recibo.locador) === nomeSimples(r0.proprietario) &&
+      nomeSimples(recibo.endereco) === nomeSimples(r0.endereco);
     if (!igual) {
       ap.push({
         tipo: "manual",
@@ -193,7 +194,7 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
   const livres = new Set(linhas.filter((l) => !ehPagamentoAdm(l.historico) && !ehIntermediacao(l.historico)));
   const tirar = (valor: number, credito: boolean, historico: string) => {
     const candidatos = [...livres].filter((l) => l.bruto === valor && (credito ? l.credito > l.debito : l.debito > l.credito));
-    const achado = candidatos.find((l) => simples(l.historico).startsWith(simples(historico).slice(0, 4))) ?? candidatos[0];
+    const achado = candidatos.find((l) => nomeSimples(l.historico).startsWith(nomeSimples(historico).slice(0, 4))) ?? candidatos[0];
     if (achado) livres.delete(achado);
     return achado;
   };
@@ -250,7 +251,7 @@ function conferirPar(recibo: Recibo | null, repasses: Repasse[], ap: Apontamento
 export const CONTA_BRADESCO = "BRADESCO";
 export const CONTA_ITAU = "ITAÚ";
 export type Conta = typeof CONTA_BRADESCO | typeof CONTA_ITAU;
-export const contaDeSaida = (banco: string) => (!banco ? "" : simples(banco).includes("bradesco") ? CONTA_BRADESCO : CONTA_ITAU);
+export const contaDeSaida = (banco: string) => (!banco ? "" : nomeSimples(banco).includes("bradesco") ? CONTA_BRADESCO : CONTA_ITAU);
 export const chaveRepasse = (contrato: string, proprietario: string) => `${contrato}|${proprietario}`;
 /** Conta escolhida na tela (troca à mão, vale até para extrato com banco) ou, sem escolha, a regra pelo banco. */
 export const contaDoRepasse = (contrato: string, r: { proprietario: string; banco: string }, escolhas: Record<string, Conta>) =>
@@ -350,7 +351,7 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
   // na mesma competência são boletos diferentes (inquilino que estava devendo, acordo: 14990, 18/11/2026).
   const porCompetencia = new Map<string, number>();
   for (const r of unicosPor(repasses, idRepasse)) {
-    const k = `${r.contrato}|${r.competencia}|${simples(r.proprietario)}|${r.vencimento}`;
+    const k = `${r.contrato}|${r.competencia}|${nomeSimples(r.proprietario)}|${r.vencimento}`;
     porCompetencia.set(k, (porCompetencia.get(k) ?? 0) + 1);
   }
 
@@ -371,14 +372,14 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
       });
     // Um extrato por proprietário; o mesmo proprietário duas vezes é repasse em duplicidade.
     const duplicados = g.repasses.filter(
-      (r) => (porCompetencia.get(`${r.contrato}|${r.competencia}|${simples(r.proprietario)}|${r.vencimento}`) ?? 0) > 1,
+      (r) => (porCompetencia.get(`${r.contrato}|${r.competencia}|${nomeSimples(r.proprietario)}|${r.vencimento}`) ?? 0) > 1,
     );
     if (duplicados.length)
       ap.push({
         tipo: "divergencia",
         texto: `Mais de um repasse na competência ${duplicados[0].competencia} para o mesmo contrato e proprietário (${[...new Set(duplicados.map((r) => r.proprietario))].join(", ")}).`,
       });
-    const unicos = g.repasses.filter((r, i, a) => a.findIndex((x) => simples(x.proprietario) === simples(r.proprietario)) === i);
+    const unicos = g.repasses.filter((r, i, a) => a.findIndex((x) => nomeSimples(x.proprietario) === nomeSimples(r.proprietario)) === i);
 
     // Sem o outro lado nos arquivos enviados: separado das divergências, porque pode ser só arquivo faltando.
     let semPar: Caso["status"] | null = null;
@@ -387,7 +388,7 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
       if (outro)
         ap.push({ tipo: "divergencia", texto: `Vencimento diferente: recibo ${vencimento}, extrato de repasse ${outro.vencimento}.` });
       else semPar = "sem_extrato";
-    } else if (!recibo && !simples(r0.situacao).includes("garantido") && !simples(r0.situacao).includes("precadastro")) {
+    } else if (!recibo && !nomeSimples(r0.situacao).includes("garantido") && !nomeSimples(r0.situacao).includes("precadastro")) {
       const outro = recibos.find((r) => r.contrato === contrato);
       if (outro)
         ap.push({ tipo: "divergencia", texto: `Vencimento diferente: extrato de repasse ${vencimento}, recibo ${outro.vencimento}.` });
@@ -420,4 +421,38 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
   }
   const ordem = { divergencia: 0, manual: 1, sem_extrato: 2, sem_recibo: 3, ok: 4 };
   return casos.sort((a, b) => ordem[a.status] - ordem[b.status] || Number(a.contrato) - Number(b.contrato));
+}
+
+/** Mesmo conteúdo (sem arquivo/página) dá a mesma chave, em qualquer ordem de campos (o jsonb do banco reordena). */
+const estavel = (v: unknown): unknown =>
+  Array.isArray(v) ? v.map(estavel) : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, estavel((v as Record<string, unknown>)[k])])) : v;
+export const chaveConteudo = ({ arquivo: _a, pagina: _p, origem: _o, ...resto }: Recibo | Repasse) => JSON.stringify(estavel(resto));
+
+/**
+ * Represados: extratos dos proprietários que pedem para segurar o repasse saem da conferência do dia e vão para o
+ * banco, junto com os recibos dos mesmos contratos. O recibo continua na conferência se o contrato também tem extrato
+ * de quem não é represado. `guardados` (já no banco) evita guardar a mesma cópia duas vezes; versão diferente é
+ * guardada, e a conferência dos represados aponta a divergência.
+ */
+export function separarRepresados(recibos: Recibo[], repasses: Repasse[], nomes: string[], guardados: (Recibo | Repasse)[]) {
+  const represado = new Set(nomes.map(nomeSimples));
+  const ehRepresado = (r: Repasse) => represado.has(nomeSimples(r.proprietario));
+  const contratosRepresados = new Set(repasses.filter(ehRepresado).map((r) => r.contrato));
+  const contratosDoDia = new Set(repasses.filter((r) => !ehRepresado(r)).map((r) => r.contrato));
+  const ja = new Set(guardados.map(chaveConteudo));
+  const novo = (r: Recibo | Repasse) => {
+    const c = chaveConteudo(r);
+    return !ja.has(c) && !!ja.add(c);
+  };
+  return {
+    ficam: {
+      recibos: recibos.filter((r) => !contratosRepresados.has(r.contrato) || contratosDoDia.has(r.contrato)),
+      repasses: repasses.filter((r) => !ehRepresado(r)),
+    },
+    guardar: {
+      recibos: recibos.filter((r) => contratosRepresados.has(r.contrato) && novo(r)),
+      repasses: repasses.filter((r) => ehRepresado(r) && novo(r)),
+    },
+    proprietarios: [...new Set(repasses.filter(ehRepresado).map((r) => r.proprietario))],
+  };
 }
