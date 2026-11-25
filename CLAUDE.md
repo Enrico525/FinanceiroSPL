@@ -85,18 +85,6 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 
 ## Pendências (aguardando o negócio)
 
-- Validar com um par recibo × extrato do mesmo lote. Lote de 13/11/2026: leitura ok em todos os PDFs, mas os extratos
-  cobriam só 2 de 47 contratos (14756 bateu inteiro; no 15215 a divergência do "Condomínio Prop" não repassado era
-  erro real, confirmado e corrigido pelo financeiro). Lote de 16/11/2026: 42 extratos lidos, valores iguais ao
-  "Total Pendente" de cada página, e a soma do Itaú bateu com a soma manual do financeiro depois de tirar um extrato
-  e digitar 4 lançamentos manuais; as divergências desse lote ainda não foram revisadas com o financeiro.
-  Lote de 17/11/2026: 192 páginas de extrato (191 extratos; o 14881 veio repetido), soma R$ 818.870,23 com o 7159
-  corrigido. A fita do financeiro (soma de telas do NIDO, 192 repasses) deu R$ 852.547,55, ~R$ 31,6 mil a mais:
-  diferença ainda sem explicação, falta a lista do NIDO com contrato e valor para comparar.
-  Soma manual do financeiro no mesmo lote: R$ 812.148,37 (Bradesco 291.486,89, Itaú 520.661,48). Fechou com o app
-  tirando o 14793 (R$ 6.721,86, confirmado pelo financeiro); o erro de banco era da soma manual (14481 Bradesco
-  somado no Itaú). Certo: Bradesco 301.576,14, Itaú 510.572,23.
-
 - Juros de condomínio são repassados mas **não** entram na base da taxa ADM (hoje o código soma todos os juros):
   falta saber como a linha aparece no extrato e se a multa de condomínio segue a mesma regra. Perguntas para o
   financeiro em `docs/REGRAS-PARA-FINANCEIRO.md`.
