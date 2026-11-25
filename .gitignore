@@ -8,7 +8,6 @@ dist/
 !.env.example
 *.log
 worker-configuration.d.ts
-usuarios.local.json
 
 # Nunca versionar documentos reais
 *.pdf
