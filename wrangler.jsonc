@@ -30,11 +30,16 @@
     { "name": "LIMITADOR", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }
   ],
 
+  // A cada 3 dias, uma leitura mínima no Supabase para o projeto grátis não pausar (worker/represados.ts).
+  "triggers": { "crons": ["0 9 */3 * *"] },
+
   // Valores de produção. Em desenvolvimento local são sobrescritos por .dev.vars.
   // Secrets (nunca aqui):
   //   USUARIOS        → npm run usuarios -- publicar
   //   SESSION_SECRET  → npx wrangler secret put SESSION_SECRET
   //   OPENAI_API_KEY  → npx wrangler secret put OPENAI_API_KEY
+  //   SUPABASE_URL    → npx wrangler secret put SUPABASE_URL   (represados; tabela em supabase/represados.sql)
+  //   SUPABASE_KEY    → npx wrangler secret put SUPABASE_KEY   (chave secreta do Supabase)
   "vars": {
     "AMBIENTE": "producao",
     "OPENAI_MODEL": ""

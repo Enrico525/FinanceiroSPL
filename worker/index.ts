@@ -1,13 +1,26 @@
-import { PedidoAnalise } from "../shared/contrato";
+import { PedidoAnalise, PedidoApagar, PedidoGuardar, type CodigoErro } from "../shared/contrato";
 import type { Ambiente } from "./ambiente";
 import { autenticar } from "./auth";
 import { entrar } from "./login";
 import { analisarComOpenAI, ErroAnalise } from "./openai";
+import { apagarRepresados, ErroBanco, guardarRepresados, listarRepresados, manterAtivo } from "./represados";
 import { erro, json, requisicaoDoApp } from "./resposta";
 import { apagarSessao } from "./sessao";
 
 // Margem sobre LIMITES.caracteresTotais para acentos (UTF-8) e escapes do JSON.
 const MAX_BYTES_CORPO = 4 * 1024 * 1024;
+
+/** Lê o JSON do corpo com limite de tamanho; devolve o código de erro quando não dá. */
+async function lerCorpo(request: Request): Promise<{ corpo: unknown } | { codigo: CodigoErro }> {
+  if (Number(request.headers.get("Content-Length") ?? 0) > MAX_BYTES_CORPO) return { codigo: "texto_muito_extenso" };
+  const bruto = await request.text();
+  if (bruto.length > MAX_BYTES_CORPO) return { codigo: "texto_muito_extenso" };
+  try {
+    return { corpo: JSON.parse(bruto) };
+  } catch {
+    return { codigo: "requisicao_invalida" };
+  }
+}
 
 export default {
   async fetch(request: Request, env: Ambiente): Promise<Response> {
@@ -36,17 +49,9 @@ export default {
         const { success } = await env.LIMITADOR.limit({ key: `analise:${usuario}` });
         if (!success) return erro("limite_requisicoes");
 
-        if (Number(request.headers.get("Content-Length") ?? 0) > MAX_BYTES_CORPO) return erro("texto_muito_extenso");
-        const bruto = await request.text();
-        if (bruto.length > MAX_BYTES_CORPO) return erro("texto_muito_extenso");
-
-        let corpo: unknown;
-        try {
-          corpo = JSON.parse(bruto);
-        } catch {
-          return erro("requisicao_invalida");
-        }
-        const pedido = PedidoAnalise.safeParse(corpo);
+        const lido = await lerCorpo(request);
+        if ("codigo" in lido) return erro(lido.codigo);
+        const pedido = PedidoAnalise.safeParse(lido.corpo);
         if (!pedido.success) {
           const extenso = pedido.error.issues.some((i) => i.message === "texto muito extenso");
           return erro(extenso ? "texto_muito_extenso" : "requisicao_invalida");
@@ -55,12 +60,37 @@ export default {
         return json(await analisarComOpenAI(pedido.data, env));
       }
 
+      if (url.pathname === "/api/represados" && request.method === "GET") {
+        return json(await listarRepresados(env));
+      }
+
+      if ((url.pathname === "/api/represados" || url.pathname === "/api/represados/apagar") && request.method === "POST") {
+        if (!requisicaoDoApp(request, url)) return erro("requisicao_invalida");
+        if (!(await env.LIMITADOR.limit({ key: `represados:${usuario}` })).success) return erro("limite_requisicoes");
+        const lido = await lerCorpo(request);
+        if ("codigo" in lido) return erro(lido.codigo);
+        if (url.pathname === "/api/represados") {
+          const pedido = PedidoGuardar.safeParse(lido.corpo);
+          if (!pedido.success) return erro("requisicao_invalida");
+          await guardarRepresados(env, pedido.data, usuario);
+        } else {
+          const pedido = PedidoApagar.safeParse(lido.corpo);
+          if (!pedido.success) return erro("requisicao_invalida");
+          await apagarRepresados(env, pedido.data);
+        }
+        return json({ ok: true });
+      }
+
       return json({ erro: "requisicao_invalida" }, 404);
     } catch (e) {
-      const codigo = e instanceof ErroAnalise ? e.codigo : "interno";
+      const codigo = e instanceof ErroAnalise ? e.codigo : e instanceof ErroBanco ? "falha_banco" : "interno";
       // Somente a categoria. Nunca registrar corpo, texto, senha, resposta da IA ou mensagens de exceção.
       console.error(JSON.stringify({ evento: "erro_api", rota: url.pathname, codigo }));
       return erro(codigo);
     }
+  },
+
+  async scheduled(_controle: ScheduledController, env: Ambiente): Promise<void> {
+    await manterAtivo(env).catch(() => console.error(JSON.stringify({ evento: "erro_cron", codigo: "falha_banco" })));
   },
 };

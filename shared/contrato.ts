@@ -67,7 +67,55 @@ export const ResultadoAnalise = z.strictObject({
 export type ResultadoAnalise = z.infer<typeof ResultadoAnalise>;
 export type Referencia = z.infer<typeof Referencia>;
 
+// Repasses represados (guardados no Supabase até a conferência ser concluída). Espelha Recibo/Repasse de src/nido/ler.ts.
+const Txt = z.string().max(2000);
+const Centavos = z.int();
+const Recibo = z.strictObject({
+  arquivo: Txt,
+  pagina: z.int(),
+  origem: Txt.optional(),
+  contrato: Txt,
+  locatario: Txt,
+  locador: Txt,
+  endereco: Txt,
+  vencimento: Txt,
+  linhas: z.array(z.strictObject({ vencimento: Txt, historico: Txt, debito: Centavos, credito: Centavos })).max(500),
+  pago: Centavos,
+});
+const Repasse = z.strictObject({
+  arquivo: Txt,
+  pagina: z.int(),
+  origem: Txt.optional(),
+  proprietario: Txt,
+  banco: Txt,
+  pagamento: z.strictObject({ documento: Txt, forma: Txt, agencia: Txt, conta: Txt, tipoConta: Txt, descricao: Txt }),
+  contrato: Txt,
+  endereco: Txt,
+  situacao: Txt,
+  taxaAdm: z.int().nullable(),
+  inquilino: Txt,
+  numero: Txt,
+  competencia: Txt,
+  vencimento: Txt,
+  linhas: z
+    .array(
+      z.strictObject({ vencimento: Txt, historico: Txt, bruto: Centavos, participacao: Txt, debito: Centavos, credito: Centavos }),
+    )
+    .max(500),
+  pago: Centavos,
+});
+export const PedidoGuardar = z
+  .strictObject({ recibos: z.array(Recibo).max(2000), repasses: z.array(Repasse).max(2000) })
+  .refine((p) => p.recibos.length + p.repasses.length > 0, "vazio");
+export type PedidoGuardar = z.infer<typeof PedidoGuardar>;
+export const PedidoApagar = z.strictObject({ ids: z.array(z.int().positive()).min(1).max(4000) });
+export type PedidoApagar = z.infer<typeof PedidoApagar>;
+export type Represado =
+  | { id: number; tipo: "recibo"; dados: z.infer<typeof Recibo> }
+  | { id: number; tipo: "repasse"; dados: z.infer<typeof Repasse> };
+
 export type CodigoErro =
+  | "falha_banco"
   | "nao_autenticado"
   | "credenciais_invalidas"
   | "requisicao_invalida"

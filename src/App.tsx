@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { buscarUsuario, ErroApi, sair } from "./api";
+import { apagarRepresados, buscarUsuario, ErroApi, guardarRepresados, listarRepresados, sair } from "./api";
+import type { Represado } from "../shared/contrato";
 import { lerPdf, ErroLeitura } from "./pdf/extrair";
 import { juntarPdfs } from "./pdf/juntar";
 import { extratosNaoLidos, lerRecibos, lerRepasses, type Recibo, type Repasse } from "./nido/ler";
-import { conferirSem, idRepasse, jaPagosAntes } from "./nido/conferir";
+import { conferirSem, idRepasse, jaPagosAntes, nomeSimples, reais, separarRepresados } from "./nido/conferir";
 import { AvisoAtualizacao } from "./components/AvisoAtualizacao";
 import { SeletorPdf, type ArquivoLido } from "./components/SeletorPdf";
 import { Resultado } from "./components/Resultado";
@@ -12,11 +13,12 @@ import { Login } from "./components/Login";
 type Lado = "recibos" | "repasses" | "anteriores";
 /** geral: todos os extratos de uma vez. um: um extrato por vez, mantendo os recibos carregados. */
 export type Modo = "geral" | "um";
-type Pagina = Modo | "juntar";
+type Pagina = Modo | "juntar" | "represados";
 const PAGINAS: { id: Pagina; nome: string; descricao: string }[] = [
   { id: "juntar", nome: "Juntar PDF", descricao: "Vários extratos de repasse em um PDF só" },
   { id: "um", nome: "Repasses únicos", descricao: "Recibos ficam carregados; confira um ou vários extratos por vez" },
   { id: "geral", nome: "Repasses juntados", descricao: "Todos os recibos × todos os extratos (ou o PDF juntado)" },
+  { id: "represados", nome: "Represados", descricao: "Repasses segurados a pedido do proprietário: confira e conclua" },
 ];
 type Arquivos = { recibos: ArquivoLido<Recibo>[]; repasses: ArquivoLido<Repasse>[]; anteriores: ArquivoLido<Repasse>[] };
 const VAZIO: Arquivos = { recibos: [], repasses: [], anteriores: [] };
@@ -46,7 +48,20 @@ export function App() {
     [base, removidos, jaPagos, liberados],
   );
   const [pagina, setPagina] = useState<Pagina>("geral");
-  const modo: Modo = pagina === "juntar" ? "geral" : pagina;
+  const modo: Modo = pagina === "um" ? "um" : "geral";
+  // Represados guardados no banco (todas as usuárias veem os mesmos); `usados` são os ids da conferência em tela.
+  const [represados, setRepresados] = useState<{ itens: Represado[]; nomes: string[] } | null>(null);
+  // Conferência dos represados: um proprietário por vez (chave = nome sem acento/maiúscula).
+  const [selecionado, setSelecionado] = useState<string | null>(null);
+  const [usados, setUsados] = useState<number[]>([]);
+  const [avisoRepresados, setAvisoRepresados] = useState("");
+  // Proprietários represados que a conferência do dia separou e guardou no banco.
+  const [separados, setSeparados] = useState<string[]>([]);
+  const recarregarRepresados = () =>
+    listarRepresados().then(setRepresados, (e: Error) => setAvisoRepresados(e.message));
+  useEffect(() => {
+    if (pagina === "represados" && usuario) recarregarRepresados();
+  }, [pagina, usuario]);
   const proximoId = useRef(0);
 
   useEffect(() => {
@@ -66,6 +81,9 @@ export function App() {
     setBase(null);
     setRemovidos(new Set());
     setLiberados(new Set());
+    setSelecionado(null);
+    setUsados([]);
+    setSeparados([]);
   };
 
   // Limpeza de melhor esforço ao sair da página.
@@ -133,8 +151,31 @@ export function App() {
   const prontos =
     !todos.some((a) => a.estado !== "ok") && lidos(arquivos.recibos).length > 0 && lidos(arquivos.repasses).length > 0;
 
-  const iniciar = () => {
-    setBase({ recibos: lidos(arquivos.recibos), repasses: lidos(arquivos.repasses), anteriores: lidos(arquivos.anteriores) });
+  const [separando, setSeparando] = useState(false);
+  /**
+   * Tira da conferência os extratos dos proprietários represados (e os recibos só deles) e guarda no banco.
+   * Se o banco falhar, devolve null e a conferência não começa: um represado não pode cair no pagamento do dia.
+   */
+  const separar = async (recibos: Recibo[], repasses: Repasse[]) => {
+    setSeparando(true);
+    try {
+      const { itens, nomes } = await listarRepresados();
+      const s = separarRepresados(recibos, repasses, nomes, itens.map((i) => i.dados));
+      if (s.guardar.recibos.length + s.guardar.repasses.length) await guardarRepresados(s.guardar);
+      setSeparados((antes) => [...new Set([...antes, ...s.proprietarios])]);
+      return s.ficam;
+    } catch (e) {
+      alert(`Não foi possível separar os represados, por isso a conferência não começou. ${(e as Error).message}`);
+      return null;
+    } finally {
+      setSeparando(false);
+    }
+  };
+
+  const iniciar = async () => {
+    const ficam = await separar(lidos(arquivos.recibos), lidos(arquivos.repasses));
+    if (!ficam) return;
+    setBase({ ...ficam, anteriores: lidos(arquivos.anteriores) });
     setRemovidos(new Set());
     setLiberados(new Set());
     // A lista de arquivos é esvaziada; os dados lidos ficam em `base` enquanto o resultado está na tela.
@@ -144,14 +185,67 @@ export function App() {
 
   // Extratos adicionados com o resultado na tela: o extrato com o mesmo número e proprietário é substituído
   // (versão corrigida); os demais continuam.
-  const analisarDeNovo = () => {
-    const novos = lidos(arquivos.repasses);
+  const analisarDeNovo = async () => {
+    const ficam = await separar([], lidos(arquivos.repasses));
+    if (!ficam) return;
+    const novos = ficam.repasses;
     const ids = new Set(novos.map(idRepasse));
     setBase((b) => b && { ...b, repasses: [...b.repasses.filter((r) => !ids.has(idRepasse(r))), ...novos] });
     setRemovidos((s) => new Set([...s].filter((id) => !ids.has(id))));
     setArquivos((s) => ({ ...s, repasses: [] }));
   };
   const extrasProntos = arquivos.repasses.length > 0 && arquivos.repasses.every((a) => a.estado === "ok");
+
+  // Um grupo por proprietário: os nomes da lista e quem ainda tem dados guardados (mesmo se saiu da lista).
+  const grupos = (() => {
+    const itens = represados?.itens ?? [];
+    const recibos = itens.flatMap((r) => (r.tipo === "recibo" ? [r] : []));
+    const porChave = new Map<string, { nome: string; repasses: Extract<Represado, { tipo: "repasse" }>[] }>();
+    for (const nome of represados?.nomes ?? []) porChave.set(nomeSimples(nome), { nome, repasses: [] });
+    for (const r of itens) {
+      if (r.tipo !== "repasse") continue;
+      const chave = nomeSimples(r.dados.proprietario);
+      if (!porChave.has(chave)) porChave.set(chave, { nome: r.dados.proprietario, repasses: [] });
+      porChave.get(chave)!.repasses.push(r);
+    }
+    return [...porChave].map(([chave, g]) => {
+      const contratos = [...new Set(g.repasses.map((r) => r.dados.contrato))].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
+      return {
+        chave,
+        ...g,
+        contratos: contratos.map((c) => ({
+          contrato: c,
+          repasses: g.repasses.filter((r) => r.dados.contrato === c),
+          recibos: recibos.filter((r) => r.dados.contrato === c),
+        })),
+      };
+    }).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  })();
+  const grupoEmTela = grupos.find((g) => g.chave === selecionado);
+
+  const conferirRepresado = (chave: string) => {
+    const g = grupos.find((x) => x.chave === chave);
+    if (!g) return;
+    const recibos = g.contratos.flatMap((c) => c.recibos);
+    setSelecionado(chave);
+    setUsados([...g.repasses, ...recibos].map((r) => r.id));
+    setBase({ recibos: recibos.map((r) => r.dados), repasses: g.repasses.map((r) => r.dados), anteriores: [] });
+    setRemovidos(new Set());
+    setLiberados(new Set());
+    setAvisoRepresados("");
+  };
+
+  const concluirRepresados = async () => {
+    if (!confirm(`Concluir a conferência de ${grupoEmTela?.nome} e apagar do banco os ${usados.length} documentos dela? Não dá para desfazer.`)) return;
+    try {
+      await apagarRepresados(usados);
+      limparTudo();
+      setAvisoRepresados("Conferência concluída: os dados foram apagados do banco.");
+      await recarregarRepresados();
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  };
 
   const pedirLimpeza = () => {
     if (casos && !confirm("Começar uma nova conferência? O resultado atual não poderá ser recuperado.")) return;
@@ -263,11 +357,27 @@ export function App() {
                 </>
               ) : (
                 <>
-                  <h1>{modo === "um" ? "Repasses únicos" : "Repasses juntados"}</h1>
-                  <p className="subtitulo">
-                    Recibos do Locatário × Extratos de Repasse exportados do NIDO. Os PDFs são lidos e conferidos no seu
-                    computador: nada é enviado nem salvo.
-                  </p>
+                  <h1>
+                    {PAGINAS.find((p) => p.id === pagina)?.nome}
+                    {pagina === "represados" && casos && grupoEmTela ? `: ${grupoEmTela.nome}` : ""}
+                  </h1>
+                  {pagina === "represados" ? (
+                    <p className="subtitulo">
+                      Repasses que o proprietário pediu para segurar. A conferência do dia separa sozinha os extratos
+                      destes proprietários e guarda no banco só os dados lidos (o PDF não). Ao concluir a conferência
+                      aqui, os dados dela são apagados.
+                    </p>
+                  ) : (
+                    <p className="subtitulo">
+                      Recibos do Locatário × Extratos de Repasse exportados do NIDO. Os PDFs são lidos e conferidos no
+                      seu computador: nada é enviado nem salvo.
+                    </p>
+                  )}
+                  {pagina === "represados" && avisoRepresados && (
+                    <p className="alerta" role="status">
+                      {avisoRepresados}
+                    </p>
+                  )}
 
                   {modo === "um" && (
                     <p className="alerta">
@@ -276,7 +386,54 @@ export function App() {
                     </p>
                   )}
 
-                  {!casos && (
+                  {!casos && pagina === "represados" && (
+                    <section aria-label="Conferir represados">
+                      {!represados ? (
+                        !avisoRepresados && <p role="status">Carregando…</p>
+                      ) : !grupos.length ? (
+                        <p className="caso__meta">Nenhum proprietário represado cadastrado (tabela represados_nomes no Supabase).</p>
+                      ) : (
+                        grupos.map((g) => (
+                          <details key={g.chave} className="caso">
+                            <summary>
+                              <strong>{g.nome}</strong> ·{" "}
+                              {g.repasses.length
+                                ? `${g.contratos.length} contrato(s), ${g.repasses.length} extrato(s), ${reais(g.repasses.reduce((n, r) => n + r.dados.pago, 0))}`
+                                : "nada guardado"}
+                            </summary>
+                            {g.contratos.map((c) => (
+                              <div key={c.contrato}>
+                                <h3>Contrato {c.contrato}</h3>
+                                <ul className="seletor__lista">
+                                  {c.repasses.map((r) => (
+                                    <li key={r.id}>
+                                      Extrato nº {r.dados.numero} · competência {r.dados.competencia} · venc. {r.dados.vencimento} ·{" "}
+                                      <strong>{reais(r.dados.pago)}</strong>
+                                    </li>
+                                  ))}
+                                  {c.recibos.map((r) => (
+                                    <li key={r.id}>
+                                      Recibo · venc. {r.dados.vencimento} · inquilino {r.dados.locatario} · pago {reais(r.dados.pago)}
+                                    </li>
+                                  ))}
+                                  {!c.recibos.length && <li className="caso__meta">Sem recibo guardado para este contrato.</li>}
+                                </ul>
+                              </div>
+                            ))}
+                            {g.repasses.length > 0 && (
+                              <div className="acoes">
+                                <button type="button" className="botao" onClick={() => conferirRepresado(g.chave)}>
+                                  Conferir {g.nome}
+                                </button>
+                              </div>
+                            )}
+                          </details>
+                        ))
+                      )}
+                    </section>
+                  )}
+
+                  {!casos && pagina !== "represados" && (
                     <div className="seletores">
                       {(["recibos", "repasses", "anteriores"] as const).map((lado) => (
                         <SeletorPdf
@@ -292,10 +449,19 @@ export function App() {
                   )}
 
                   <div className="acoes">
-                    {!casos ? (
-                      <button type="button" className="botao" disabled={!prontos} onClick={iniciar}>
-                        Conferir
+                    {!casos && pagina === "represados" ? null : !casos ? (
+                      <button type="button" className="botao" disabled={!prontos || separando} onClick={iniciar}>
+                        {separando ? "Separando represados…" : "Conferir"}
                       </button>
+                    ) : pagina === "represados" ? (
+                      <>
+                        <button type="button" className="botao" onClick={concluirRepresados}>
+                          Concluir e apagar do banco
+                        </button>
+                        <button type="button" className="botao botao--secundario" onClick={limparTudo}>
+                          Voltar sem concluir
+                        </button>
+                      </>
                     ) : modo === "um" ? (
                       <>
                         <button type="button" className="botao" onClick={() => setBase(null)}>
@@ -312,7 +478,14 @@ export function App() {
                     )}
                   </div>
 
-                  {casos && (
+                  {casos && pagina !== "represados" && separados.length > 0 && (
+                    <p className="alerta nao-imprimir" role="status">
+                      Represados guardados no banco e fora desta conferência: {separados.join(", ")}. Confira e conclua na
+                      página “Represados”.
+                    </p>
+                  )}
+
+                  {casos && pagina !== "represados" && (
                     <section className="adicionar nao-imprimir" aria-label="Adicionar extratos">
                       <SeletorPdf
                         rotulo="Adicionar ou trocar extratos"
@@ -325,7 +498,7 @@ export function App() {
                         Os extratos já analisados continuam. Um extrato com o mesmo número e proprietário substitui o
                         anterior (use para colocar a versão corrigida).
                       </p>
-                      <button type="button" className="botao" disabled={!extrasProntos} onClick={analisarDeNovo}>
+                      <button type="button" className="botao" disabled={!extrasProntos || separando} onClick={analisarDeNovo}>
                         Analisar de novo
                       </button>
                     </section>

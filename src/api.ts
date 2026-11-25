@@ -1,4 +1,4 @@
-import type { CodigoErro } from "../shared/contrato";
+import type { CodigoErro, PedidoGuardar, Represado } from "../shared/contrato";
 
 const MENSAGENS: Record<CodigoErro, string> = {
   nao_autenticado: "Sua sessão terminou. Recarregue a página para entrar novamente.",
@@ -9,6 +9,7 @@ const MENSAGENS: Record<CodigoErro, string> = {
   timeout: "A análise demorou demais e foi interrompida. Tente novamente.",
   falha_ia: "O serviço de análise está indisponível no momento. Tente novamente mais tarde.",
   resposta_invalida: "A análise retornou um resultado inválido. Repita o procedimento.",
+  falha_banco: "Não foi possível acessar os represados no banco de dados. Tente novamente.",
   interno: "Ocorreu um erro inesperado. Tente novamente.",
 };
 
@@ -43,3 +44,10 @@ export const entrar = (nome: string, senha: string) =>
 
 export const sair = () => chamar<{ ok: true }>("/auth/sair", { method: "POST", headers: DO_APP, body: "{}" });
 
+export const listarRepresados = () => chamar<{ itens: Represado[]; nomes: string[] }>("/api/represados");
+
+export const guardarRepresados = (pedido: PedidoGuardar) =>
+  chamar<{ ok: true }>("/api/represados", { method: "POST", headers: DO_APP, body: JSON.stringify(pedido) });
+
+export const apagarRepresados = (ids: number[]) =>
+  chamar<{ ok: true }>("/api/represados/apagar", { method: "POST", headers: DO_APP, body: JSON.stringify({ ids }) });

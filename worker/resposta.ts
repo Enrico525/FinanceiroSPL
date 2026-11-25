@@ -9,6 +9,7 @@ const STATUS: Record<CodigoErro, number> = {
   timeout: 504,
   falha_ia: 502,
   resposta_invalida: 502,
+  falha_banco: 502,
   interno: 500,
 };
 

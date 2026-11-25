@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conferir, conferirSem, idRepasse, jaPagosAntes, taxaAdmEsperada, totais } from "./conferir";
+import { conferir, conferirSem, idRepasse, jaPagosAntes, separarRepresados, taxaAdmEsperada, totais } from "./conferir";
 import type { LinhaRepasse, Recibo, Repasse } from "./ler";
 
 const V = "05/11/2026";
@@ -502,5 +502,39 @@ describe("jaPagosAntes", () => {
   it("leva a soma das linhas de cada extrato para o relatório", () => {
     const [c] = conferir([], [{ ...repasse([["Aluguel", 1000, true]]), pago: 999 }]);
     expect(c.repasses[0]).toMatchObject({ valor: 999, liquido: 1000 });
+  });
+});
+
+describe("separarRepresados", () => {
+  const rA = repasse([["Aluguel", 100000, true]], { contrato: "1", proprietario: "JOSÉ DA SILVA", numero: "10" });
+  const rB = repasse([["Aluguel", 50000, true]], { contrato: "2", proprietario: "MARIA SOUZA", numero: "20" });
+  // Contrato 3 dividido: uma parte é de represado, a outra não.
+  const rC1 = repasse([["Aluguel", 30000, true]], { contrato: "3", proprietario: "JOSE DA SILVA", numero: "31" });
+  const rC2 = repasse([["Aluguel", 30000, true]], { contrato: "3", proprietario: "MARIA SOUZA", numero: "32" });
+  const rec = (contrato: string) => recibo([["Aluguel", 100000, 0]], { contrato });
+  const recibos = [rec("1"), rec("2"), rec("3"), rec("4")];
+
+  it("tira os extratos dos nomes da lista (sem acento/maiúscula) e leva os recibos dos mesmos contratos", () => {
+    const s = separarRepresados(recibos, [rA, rB, rC1, rC2], ["jose da silva"], []);
+    expect(s.ficam.repasses).toEqual([rB, rC2]);
+    expect(s.ficam.recibos.map((r) => r.contrato)).toEqual(["2", "3", "4"]);
+    expect(s.guardar.repasses).toEqual([rA, rC1]);
+    expect(s.guardar.recibos.map((r) => r.contrato)).toEqual(["1", "3"]);
+    expect(s.proprietarios).toEqual(["JOSÉ DA SILVA", "JOSE DA SILVA"]);
+  });
+
+  it("não guarda de novo a mesma cópia (mesmo vinda de outro arquivo ou com campos em outra ordem); versão nova é guardada", () => {
+    const jaNoBanco = JSON.parse(JSON.stringify({ ...rA, arquivo: "outro.pdf", pagina: 9 }));
+    const reordenado = Object.fromEntries(Object.entries(jaNoBanco).reverse()) as Repasse;
+    const versaoNova = { ...rA, pago: 99999 };
+    const s = separarRepresados([], [rA, rA, versaoNova], ["José da Silva"], [reordenado]);
+    expect(s.guardar.repasses).toEqual([versaoNova]);
+    expect(s.ficam.repasses).toEqual([]);
+  });
+
+  it("sem nomes na lista, nada muda", () => {
+    const s = separarRepresados(recibos, [rA, rB], [], []);
+    expect(s.ficam).toEqual({ recibos, repasses: [rA, rB] });
+    expect(s.guardar).toEqual({ recibos: [], repasses: [] });
   });
 });

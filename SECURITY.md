@@ -22,6 +22,8 @@
 
 ## Checklist de implantação
 
+- [ ] Represados: rodar `supabase/represados.sql` no projeto Supabase e gravar `SUPABASE_URL` e `SUPABASE_KEY` com `npx wrangler secret put`.
+
 - [ ] `npm run usuarios -- listar` mostra só as pessoas autorizadas; lista publicada ([docs/DEPLOY-TESTE.md](docs/DEPLOY-TESTE.md)).
 - [ ] Senhas entregues por canal privado; ninguém compartilha a própria senha.
 - [ ] `SESSION_SECRET` (≥ 32 caracteres aleatórios) via `wrangler secret put`.
@@ -34,6 +36,8 @@
 - [ ] `npm audit` sem vulnerabilidades altas.
 
 ## Riscos conhecidos
+
+- Represados no Supabase: CPF/CNPJ e dados bancários ficam guardados até a conclusão. Mitigação: só o Worker acessa (Secret `SUPABASE_KEY`, nunca no navegador), RLS sem políticas para `anon`/`authenticated`, dados validados (zod) antes de gravar, apagados ao concluir. Quem tiver a chave secreta lê tudo: guardar só como Secret.
 
 - A conferência não usa IA. A rota OpenAI, sem uso pelo app, continua sujeita a prompt injection se voltar a ser usada.
 - O relatório (tela e impressão) mostra CPF/CNPJ e dados bancários dos proprietários. O app não guarda nada, mas o
