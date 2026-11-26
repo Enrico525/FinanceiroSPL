@@ -22,6 +22,7 @@ banco, agência e conta). Nome do usuário para login.
 | Cookie de sessão (navegador) | Nome do usuário, assinado | Até 8 h ou até sair |
 | OpenAI | Nenhum (rota `/api/analisar` existe, mas o app não a usa) | — |
 | Supabase (tabela `represados`) | Só os **represados**: dados lidos dos recibos e extratos (nomes, CPF/CNPJ, valores, endereço, dados bancários) e o nome de quem guardou, mais a lista de nomes dos proprietários represados. O PDF não. | Até a pessoa concluir a conferência daquele proprietário (apaga na hora) ⚖️ |
+| Supabase (tabela `represados_log`) | Log de cada documento guardado ou apagado dos represados: quando, tipo, nº do contrato, nº do extrato e quem guardou. Sem nome, CPF ou valor. | 30 dias (cada gravação apaga o que for mais antigo) |
 
 Logs técnicos contêm apenas categoria de erro e rota, sem conteúdo.
 
