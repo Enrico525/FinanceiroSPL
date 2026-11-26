@@ -33,3 +33,35 @@ revoke truncate, references, trigger on public.represados, public.represados_nom
 -- Função criada pelo Supabase (liga o RLS em tabela nova): ninguém de fora precisa executá-la.
 revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
 -- Exemplo: insert into public.represados_nomes (nome) values ('NOME COMO VEM NO EXTRATO');
+
+-- Log do que sobe e do que é apagado dos represados, para conferir no Table Editor (represados_log).
+-- Sem nome nem valor: só quando, ação, tipo, contrato, nº do extrato e quem guardou. Guarda 30 dias:
+-- cada gravação apaga o que tiver mais que isso.
+create table if not exists public.represados_log (
+  id bigint generated always as identity primary key,
+  quando timestamptz not null default now(),
+  acao text not null check (acao in ('guardou', 'apagou')),
+  represado_id bigint not null,
+  tipo text not null,
+  contrato text,
+  extrato text,
+  guardado_por text
+);
+alter table public.represados_log enable row level security;
+revoke all on public.represados_log from anon, authenticated, service_role;
+
+create or replace function public.represados_registrar() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare r public.represados := coalesce(new, old);
+begin
+  delete from public.represados_log where quando < now() - interval '30 days';
+  insert into public.represados_log (acao, represado_id, tipo, contrato, extrato, guardado_por)
+  values (case tg_op when 'INSERT' then 'guardou' else 'apagou' end, r.id, r.tipo,
+          r.dados->>'contrato', r.dados->>'numero', r.guardado_por);
+  return null;
+end $$;
+revoke execute on function public.represados_registrar() from public, anon, authenticated, service_role;
+
+drop trigger if exists represados_log on public.represados;
+create trigger represados_log after insert or delete on public.represados
+  for each row execute function public.represados_registrar();

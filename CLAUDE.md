@@ -8,7 +8,7 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 
 - **Sem banco de dados e sem persistência** de PDFs, textos, resultados ou histórico. Nada de D1, R2, KV, IndexedDB, localStorage, sessionStorage.
   **Exceções, no Supabase:** os represados (ver Decisões), só os dados lidos e só até concluir; e as contas de login
-  (Supabase Auth: e-mail e hash da senha).
+  (Supabase Auth: e-mail e hash da senha); e o log dos represados (`represados_log`, sem nome nem valor, 30 dias).
 - **O PDF original nunca sai do navegador.** Só o texto extraído (por página) vai ao Worker.
 - **Chave da OpenAI só como Secret** (`OPENAI_API_KEY`). Nunca no frontend, repositório ou logs.
 - Chamadas à OpenAI sempre com `store: false`, sem tools, saída em JSON Schema estrito.
@@ -113,6 +113,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   (`supabase/represados.sql`; sem `truncate`/`references`/`trigger`, que o Supabase dá por padrão, e a função
   `rls_auto_enable` criada pelo Supabase sem `execute` para `public`/`anon`/`authenticated`). Alerta "RLS sem
   políticas" é intencional; proteção contra senha vazada não existe no plano grátis. Cron a cada 3 dias lê a tabela para o Supabase grátis não pausar.
+  Log (26/11/2026): gatilho no banco grava em `represados_log` cada documento que sobe ("guardou") ou é apagado
+  ("apagou"): quando, tipo, contrato, nº do extrato e quem guardou; sem nome nem valor. Cada gravação apaga o log com
+  mais de 30 dias. Ver no Table Editor do Supabase; o app não lê o log (sem permissão nem para `service_role`).
 - Secrets por linha de comando (11/2026): gravar com `printf '%s' valor | npx wrangler secret put NOME` ou digitando no
   prompt; `"valor" | ...` no PowerShell acrescenta quebra de linha e quebrou a `SUPABASE_URL` (login e represados com erro 500).
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
