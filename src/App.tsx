@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { apagarRepresados, buscarUsuario, ErroApi, guardarRepresados, listarRepresados, sair } from "./api";
+import { apagarRepresados, buscarUsuario, type Represados, ErroApi, guardarRepresados, listarRepresados, sair } from "./api";
 import type { Represado } from "../shared/contrato";
 import { lerPdf, ErroLeitura } from "./pdf/extrair";
 import { juntarPdfs } from "./pdf/juntar";
@@ -50,8 +50,8 @@ export function App() {
   const [pagina, setPagina] = useState<Pagina>("geral");
   const modo: Modo = pagina === "um" ? "um" : "geral";
   // Represados guardados no banco (todas as usuárias veem os mesmos); `usados` são os ids da conferência em tela.
-  const [represados, setRepresados] = useState<{ itens: Represado[]; nomes: string[] } | null>(null);
-  // Conferência dos represados: um proprietário por vez (chave = nome sem acento/maiúscula).
+  const [represados, setRepresados] = useState<Represados | null>(null);
+  // Conferência dos represados: uma caixa por vez (chave = grupo dos partilhados, ou o nome sem acento/maiúscula).
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [usados, setUsados] = useState<number[]>([]);
   const [avisoRepresados, setAvisoRepresados] = useState("");
@@ -196,19 +196,28 @@ export function App() {
   };
   const extrasProntos = arquivos.repasses.length > 0 && arquivos.repasses.every((a) => a.estado === "ok");
 
-  // Um grupo por proprietário: os nomes da lista e quem ainda tem dados guardados (mesmo se saiu da lista).
+  // Uma caixa por proprietário, ou por grupo dos partilhados: os nomes da lista e quem ainda tem dados guardados
+  // (mesmo se saiu da lista).
   const grupos = (() => {
     const itens = represados?.itens ?? [];
     const recibos = itens.flatMap((r) => (r.tipo === "recibo" ? [r] : []));
-    const porChave = new Map<string, { nome: string; repasses: Extract<Represado, { tipo: "repasse" }>[] }>();
-    for (const nome of represados?.nomes ?? []) porChave.set(nomeSimples(nome), { nome, repasses: [] });
+    const chaveDoNome = new Map<string, string>();
+    for (const nome of represados?.nomes ?? []) {
+      const grupo = represados?.grupos[nome];
+      chaveDoNome.set(nomeSimples(nome), grupo ? `grupo:${nomeSimples(grupo)}` : nomeSimples(nome));
+    }
+    const porChave = new Map<string, { nomes: string[]; repasses: Extract<Represado, { tipo: "repasse" }>[] }>();
+    const caixa = (chave: string) => porChave.get(chave) ?? porChave.set(chave, { nomes: [], repasses: [] }).get(chave)!;
+    for (const nome of represados?.nomes ?? []) caixa(chaveDoNome.get(nomeSimples(nome))!).nomes.push(nome);
     for (const r of itens) {
       if (r.tipo !== "repasse") continue;
-      const chave = nomeSimples(r.dados.proprietario);
-      if (!porChave.has(chave)) porChave.set(chave, { nome: r.dados.proprietario, repasses: [] });
-      porChave.get(chave)!.repasses.push(r);
+      const simples = nomeSimples(r.dados.proprietario);
+      const g = caixa(chaveDoNome.get(simples) ?? simples);
+      if (!g.nomes.some((n) => nomeSimples(n) === simples)) g.nomes.push(r.dados.proprietario);
+      g.repasses.push(r);
     }
-    return [...porChave].map(([chave, g]) => {
+    return [...porChave].map(([chave, { nomes, repasses }]) => {
+      const g = { nome: nomes.sort((a, b) => a.localeCompare(b, "pt-BR")).join(" + "), repasses };
       const contratos = [...new Set(g.repasses.map((r) => r.dados.contrato))].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
       return {
         chave,
@@ -407,7 +416,7 @@ export function App() {
                                 <ul className="seletor__lista">
                                   {c.repasses.map((r) => (
                                     <li key={r.id}>
-                                      Extrato nº {r.dados.numero} · competência {r.dados.competencia} · venc. {r.dados.vencimento} ·{" "}
+                                      {g.nome.includes(" + ") && `${r.dados.proprietario} · `}Extrato nº {r.dados.numero} · competência {r.dados.competencia} · venc. {r.dados.vencimento} ·{" "}
                                       <strong>{reais(r.dados.pago)}</strong>
                                     </li>
                                   ))}

@@ -18,6 +18,8 @@ revoke all on public.represados from anon, authenticated;
 create table if not exists public.represados_nomes (
   nome text primary key
 );
+-- Proprietários partilhados: mesmo `grupo` = uma caixa só (e uma conferência só) na página Represados.
+alter table public.represados_nomes add column if not exists grupo text;
 alter table public.represados_nomes enable row level security;
 revoke all on public.represados_nomes from anon, authenticated;
 

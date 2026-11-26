@@ -15,13 +15,19 @@ async function supabase(env: Ambiente, caminho: string, init: RequestInit = {}):
   return resposta;
 }
 
-/** Os represados guardados e os nomes dos proprietários que pedem para segurar o repasse. */
-export async function listarRepresados(env: Ambiente): Promise<{ itens: Represado[]; nomes: string[] }> {
+/**
+ * Os represados guardados, os nomes dos proprietários que pedem para segurar o repasse e, em `grupos`,
+ * nome → grupo de quem é partilhado (mesmo grupo = uma caixa só na página Represados).
+ */
+export async function listarRepresados(
+  env: Ambiente,
+): Promise<{ itens: Represado[]; nomes: string[]; grupos: Record<string, string> }> {
   const [itens, nomes] = await Promise.all([
     supabase(env, "represados?select=id,tipo,dados&order=id").then((r) => r.json() as Promise<Represado[]>),
-    supabase(env, "represados_nomes?select=nome").then((r) => r.json() as Promise<{ nome: string }[]>),
+    supabase(env, "represados_nomes?select=nome,grupo").then((r) => r.json() as Promise<{ nome: string; grupo: string | null }[]>),
   ]);
-  return { itens, nomes: nomes.map((n) => n.nome) };
+  const grupos = Object.fromEntries(nomes.flatMap((n) => (n.grupo ? [[n.nome, n.grupo]] : [])));
+  return { itens, nomes: nomes.map((n) => n.nome), grupos };
 }
 
 export async function guardarRepresados(env: Ambiente, pedido: PedidoGuardar, usuario: string): Promise<void> {

@@ -98,7 +98,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   conferência do dia. Se o banco falhar, a conferência não começa. Cópia idêntica não é guardada duas vezes. Projeto
   Supabase separado (usado só pelos represados e pelo login; o cron evita a pausa do plano grátis); todas as usuárias veem os mesmos. A página
   "Represados" não tem upload: lista cada nome com os dados guardados separados por contrato, e a conferência roda
-  **um proprietário por vez** (nunca todos juntos); "Concluir e apagar do banco" apaga só os documentos daquele nome. Acesso só pelo Worker (`worker/represados.ts`, Secrets
+  **uma caixa por vez** (nunca todos juntos): um proprietário, ou os partilhados com o mesmo `grupo` na
+  `represados_nomes` (26/11/2026: caixa com os nomes juntos e cada extrato mostra de quem é); "Concluir e apagar do banco" apaga só os documentos daquele nome. Acesso só pelo Worker (`worker/represados.ts`, Secrets
   `SUPABASE_URL`/`SUPABASE_KEY`, chave `sb_secret_…` só no header `apikey`). RLS ligado sem políticas, sem permissão para
   `anon`/`authenticated`; o projeto não dá acesso automático às tabelas novas, então `service_role` recebe só o necessário
   (`supabase/represados.sql`; sem `truncate`/`references`/`trigger`, que o Supabase dá por padrão, e a função
