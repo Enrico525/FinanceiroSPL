@@ -99,7 +99,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   **um proprietário por vez** (nunca todos juntos); "Concluir e apagar do banco" apaga só os documentos daquele nome. Acesso só pelo Worker (`worker/represados.ts`, Secrets
   `SUPABASE_URL`/`SUPABASE_KEY`, chave `sb_secret_…` só no header `apikey`). RLS ligado sem políticas, sem permissão para
   `anon`/`authenticated`; o projeto não dá acesso automático às tabelas novas, então `service_role` recebe só o necessário
-  (`supabase/represados.sql`). Cron a cada 3 dias lê a tabela para o Supabase grátis não pausar.
+  (`supabase/represados.sql`; sem `truncate`/`references`/`trigger`, que o Supabase dá por padrão, e a função
+  `rls_auto_enable` criada pelo Supabase sem `execute` para `public`/`anon`/`authenticated`). Alerta "RLS sem
+  políticas" é intencional; proteção contra senha vazada não existe no plano grátis. Cron a cada 3 dias lê a tabela para o Supabase grátis não pausar.
 - Secrets por linha de comando (11/2026): gravar com `printf '%s' valor | npx wrangler secret put NOME` ou digitando no
   prompt; `"valor" | ...` no PowerShell acrescenta quebra de linha e quebrou a `SUPABASE_URL` (login e represados com erro 500).
 - Testes usam só dados fictícios. **Nunca** versionar PDFs ou textos reais (têm CPF, nomes, contas).
