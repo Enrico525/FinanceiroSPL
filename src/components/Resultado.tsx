@@ -437,38 +437,19 @@ function Relatorio({ casos, represados, secoes, escolhas, aoEscolher, aoFechar, 
           </section>
         );
       })}
-      {/* Represados: separados antes da conferência, fora de todos os totais; só para saber quem ficou segurado. */}
+      {/* Represados desta leva: separados antes da conferência e fora de todos os totais. Só na tela, não imprime. */}
       {!filtro && represados.length > 0 && (
-        <section className="pagamentos">
-          <h3>
-            Represados (fora da soma) · {represados.length} extrato(s) · {reais(represados.reduce((n, r) => n + r.pago, 0))}
-          </h3>
-          <table className="pagamentos__tabela">
-            <thead>
-              <tr>
-                <th scope="col">Contrato</th>
-                <th scope="col">Proprietário</th>
-                <th scope="col">Extrato</th>
-                <th scope="col">Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...represados]
-                .sort((a, b) => Number(a.contrato) - Number(b.contrato))
-                .map((r) => (
-                  <tr key={`${r.numero}|${r.proprietario}`}>
-                    <td>
-                      <strong className="pagamentos__destaque">{r.contrato}</strong>
-                    </td>
-                    <td>{r.proprietario}</td>
-                    <td>
-                      nº {r.numero} · comp. {r.competencia} · venc. {r.vencimento}
-                    </td>
-                    <td className="pagamentos__valor">{reais(r.pago)}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+        <section className="sem-banco nao-imprimir" aria-label="Represados desta leva">
+          <strong>Represados desta leva (fora da soma)</strong>
+          <ul className="seletor__lista">
+            {[...represados]
+              .sort((a, b) => Number(a.contrato) - Number(b.contrato))
+              .map((r) => (
+                <li key={`${r.numero}|${r.proprietario}`}>
+                  Contrato {r.contrato} · {r.proprietario} · {reais(r.pago)}
+                </li>
+              ))}
+          </ul>
         </section>
       )}
     </div>
