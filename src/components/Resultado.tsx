@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
-import { CONTA_BRADESCO, CONTA_ITAU, chaveRepasse, contaDeSaida, contaDoRepasse, reais, totais, type Caso, type Conta, type JaPago, type Manual } from "../nido/conferir";
+import { CONTA_BRADESCO, CONTA_ITAU, chaveRepasse, nomeSimples, contaDeSaida, contaDoRepasse, reais, totais, type Caso, type Conta, type JaPago, type Manual } from "../nido/conferir";
 import { valorDigitado, type Repasse } from "../nido/ler";
 import type { Modo } from "../App";
 import { normalizarNome } from "../../shared/credenciais";
@@ -103,25 +103,32 @@ type PropsRelatorio = {
   manuais: Manual[];
   aoMudarManuais: (m: Manual[]) => void;
   represados: Repasse[];
+  donos: string[];
 };
 
 const NOME_CONTA = { [CONTA_ITAU]: "Itaú", [CONTA_BRADESCO]: "Bradesco" } as const;
 
-function Relatorio({ casos, represados, secoes, escolhas, aoEscolher, aoFechar, removidos, aoRemoverRepasse, aoRestaurar, manuais, aoMudarManuais }: PropsRelatorio) {
+function Relatorio({ casos, represados, donos, secoes, escolhas, aoEscolher, aoFechar, removidos, aoRemoverRepasse, aoRestaurar, manuais, aoMudarManuais }: PropsRelatorio) {
   const titulo = Object.fromEntries(SECOES.map((s) => [s.status, s.titulo]));
   // Relatório separado por conta de saída: com "Bradesco" ou "Itaú" escolhido, tudo (totais, lançamentos manuais,
   // contratos e impressão) mostra só os repasses daquela conta. Sem banco e sem conta escolhida: só em "Todos".
   const [filtro, setFiltro] = useState<Conta | "">("");
+  // Caixa partilhada dos represados: relatório só de um dos proprietários (lançamentos manuais não são de ninguém, ficam fora).
+  const [dono, setDono] = useState("");
   const todos = secoes.flatMap((s) => casos.filter((c) => c.status === s.status));
-  const lista = filtro
+  const lista = filtro || dono
     ? todos
         .map((c) => ({
           ...c,
-          repasses: c.repasses.filter((r) => contaDoRepasse(c.contrato, r, escolhas) === filtro),
+          repasses: c.repasses.filter(
+            (r) =>
+              (!filtro || contaDoRepasse(c.contrato, r, escolhas) === filtro) &&
+              (!dono || nomeSimples(r.proprietario) === nomeSimples(dono)),
+          ),
         }))
         .filter((c) => c.repasses.length)
     : todos;
-  const manuaisDaqui = manuais.filter((m) => !filtro || m.conta === filtro);
+  const manuaisDaqui = dono ? [] : manuais.filter((m) => !filtro || m.conta === filtro);
   const t = totais(lista, escolhas, manuaisDaqui);
   // Lançamento manual: repasse feito por fora do NIDO (sem extrato). Só soma; não há o que conferir.
   const [valorManual, setValorManual] = useState("");
@@ -168,13 +175,33 @@ function Relatorio({ casos, represados, secoes, escolhas, aoEscolher, aoFechar, 
             className="botao"
             onClick={() => {
               // A tela precisa já estar só com a conta antes de o navegador abrir a impressão.
-              flushSync(() => setFiltro(conta));
+              flushSync(() => {
+                setFiltro(conta);
+                setDono("");
+              });
               window.print();
             }}
           >
             Salvar só do {NOME_CONTA[conta]}
           </button>
         ))}
+        {donos.length > 1 &&
+          donos.map((nome) => (
+            <button
+              key={nome}
+              type="button"
+              className="botao"
+              onClick={() => {
+                flushSync(() => {
+                  setFiltro("");
+                  setDono(nome);
+                });
+                window.print();
+              }}
+            >
+              Salvar só de {nome}
+            </button>
+          ))}
         <button type="button" className="botao botao--secundario" onClick={aoFechar}>
           Voltar ao resultado
         </button>
@@ -185,15 +212,33 @@ function Relatorio({ casos, represados, secoes, escolhas, aoEscolher, aoFechar, 
           <button
             key={conta}
             type="button"
-            className={`botao botao--pequeno ${filtro === conta ? "" : "botao--secundario"}`}
-            aria-pressed={filtro === conta}
-            onClick={() => setFiltro(conta)}
+            className={`botao botao--pequeno ${filtro === conta && !dono ? "" : "botao--secundario"}`}
+            aria-pressed={filtro === conta && !dono}
+            onClick={() => {
+              setFiltro(conta);
+              setDono("");
+            }}
           >
             {conta ? `Só ${NOME_CONTA[conta]}` : "Todos"}
           </button>
         ))}
+        {donos.length > 1 &&
+          donos.map((nome) => (
+            <button
+              key={nome}
+              type="button"
+              className={`botao botao--pequeno ${dono === nome ? "" : "botao--secundario"}`}
+              aria-pressed={dono === nome}
+              onClick={() => {
+                setFiltro("");
+                setDono(nome);
+              }}
+            >
+              Só {nome}
+            </button>
+          ))}
       </div>
-      <h2>Relatório de repasses{filtro && ` — ${NOME_CONTA[filtro]}`}</h2>
+      <h2>Relatório de repasses{filtro && ` — ${NOME_CONTA[filtro]}`}{dono && ` — ${dono}`}</h2>
       <p className="caso__meta">Gerado em {new Date().toLocaleString("pt-BR")}</p>
       <section className="totais" aria-label="Totais a repassar">
         <p className="totais__geral">
@@ -268,7 +313,7 @@ function Relatorio({ casos, represados, secoes, escolhas, aoEscolher, aoFechar, 
             ))}
           </tbody>
         </table>
-        <div className={`sem-banco manuais ${manuaisDaqui.length ? "" : "nao-imprimir"}`}>
+        {!dono && <div className={`sem-banco manuais ${manuaisDaqui.length ? "" : "nao-imprimir"}`}>
           <p className="sem-banco__titulo">
             <strong>Lançamentos manuais (repasses feitos por fora, sem extrato)</strong>
           </p>
@@ -309,7 +354,7 @@ function Relatorio({ casos, represados, secoes, escolhas, aoEscolher, aoFechar, 
               ),
             )}
           </ul>
-        </div>
+        </div>}
         {t.semBanco.length > 0 && (
           <div className={`sem-banco ${faltam ? "sem-banco--pendente" : ""}`}>
             <p className="sem-banco__titulo">
@@ -516,9 +561,11 @@ type PropsResultado = {
   aoRestaurar: () => void;
   /** Extratos dos represados separados nesta conferência: só aparecem no relatório, fora da soma. */
   represados: Repasse[];
+  /** Nomes da caixa partilhada dos represados: o relatório ganha "Salvar só de <nome>" para cada um. */
+  donos: string[];
 };
 
-export function Resultado({ casos: originais, modo, represados, jaPagos, aoLiberar, removidos, aoRemoverRepasse, aoRestaurar }: PropsResultado) {
+export function Resultado({ casos: originais, modo, represados, donos, jaPagos, aoLiberar, removidos, aoRemoverRepasse, aoRestaurar }: PropsResultado) {
   const [relatorio, setRelatorio] = useState(false);
   // Some ao começar outra conferência: nada é guardado.
   const [aceitos, setAceitos] = useState<Set<string>>(new Set());
@@ -554,6 +601,7 @@ export function Resultado({ casos: originais, modo, represados, jaPagos, aoLiber
         manuais={manuais}
         aoMudarManuais={setManuais}
         represados={represados}
+        donos={donos}
       />
       </>
     );
