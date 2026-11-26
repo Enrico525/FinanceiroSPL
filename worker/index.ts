@@ -13,10 +13,11 @@ const MAX_BYTES_CORPO = 4 * 1024 * 1024;
 /** Lê o JSON do corpo com limite de tamanho; devolve o código de erro quando não dá. */
 async function lerCorpo(request: Request): Promise<{ corpo: unknown } | { codigo: CodigoErro }> {
   if (Number(request.headers.get("Content-Length") ?? 0) > MAX_BYTES_CORPO) return { codigo: "texto_muito_extenso" };
-  const bruto = await request.text();
-  if (bruto.length > MAX_BYTES_CORPO) return { codigo: "texto_muito_extenso" };
+  // Conta bytes (acento ocupa mais de um), não caracteres.
+  const bytes = await request.arrayBuffer();
+  if (bytes.byteLength > MAX_BYTES_CORPO) return { codigo: "texto_muito_extenso" };
   try {
-    return { corpo: JSON.parse(bruto) };
+    return { corpo: JSON.parse(new TextDecoder().decode(bytes)) };
   } catch {
     return { codigo: "requisicao_invalida" };
   }
