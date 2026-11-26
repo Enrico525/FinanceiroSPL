@@ -453,6 +453,7 @@ export function separarRepresados(recibos: Recibo[], repasses: Repasse[], nomes:
       recibos: recibos.filter((r) => contratosRepresados.has(r.contrato) && novo(r)),
       repasses: repasses.filter((r) => ehRepresado(r) && novo(r)),
     },
-    proprietarios: [...new Set(repasses.filter(ehRepresado).map((r) => r.proprietario))],
+    /** Todos os extratos de represados deste lote (mesmo os já guardados antes): aparecem no relatório, fora da soma. */
+    separados: repasses.filter(ehRepresado),
   };
 }

@@ -58,7 +58,7 @@ export function App() {
   const [usados, setUsados] = useState<number[]>([]);
   const [avisoRepresados, setAvisoRepresados] = useState("");
   // Proprietários represados que a conferência do dia separou e guardou no banco.
-  const [separados, setSeparados] = useState<string[]>([]);
+  const [separados, setSeparados] = useState<Repasse[]>([]);
   const recarregarRepresados = () =>
     listarRepresados().then(setRepresados, (e: Error) => setAvisoRepresados(e.message));
   useEffect(() => {
@@ -164,7 +164,8 @@ export function App() {
       const { itens, nomes } = await listarRepresados();
       const s = separarRepresados(recibos, repasses, nomes, itens.map((i) => i.dados));
       if (s.guardar.recibos.length + s.guardar.repasses.length) await guardarRepresados(s.guardar);
-      setSeparados((antes) => [...new Set([...antes, ...s.proprietarios])]);
+      // Um por extrato (número + proprietário): "Analisar de novo" com o mesmo extrato não repete a linha.
+      setSeparados((antes) => [...new Map([...antes, ...s.separados].map((r) => [idRepasse(r), r])).values()]);
       return s.ficam;
     } catch (e) {
       alert(`Não foi possível separar os represados, por isso a conferência não começou. ${(e as Error).message}`);
@@ -510,8 +511,8 @@ export function App() {
 
                   {casos && pagina !== "represados" && separados.length > 0 && (
                     <p className="alerta nao-imprimir" role="status">
-                      Represados guardados no banco e fora desta conferência: {separados.join(", ")}. Confira e conclua na
-                      página “Represados”.
+                      Represados guardados no banco e fora desta conferência:{" "}
+                      {[...new Set(separados.map((r) => r.proprietario))].join(", ")}. Confira e conclua na página “Represados”.
                     </p>
                   )}
 
@@ -538,6 +539,7 @@ export function App() {
                     <Resultado
                       casos={casos}
                       modo={modo}
+                      represados={pagina === "represados" ? [] : separados}
                       removidos={removidos.size}
                       jaPagos={jaPagos.map((j) => ({ ...j, liberado: liberados.has(j.id) }))}
                       aoLiberar={(id, sim) => setLiberados((s) => { const n = new Set(s); if (sim) n.add(id); else n.delete(id); return n; })}
