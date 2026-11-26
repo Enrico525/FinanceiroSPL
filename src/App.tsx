@@ -53,6 +53,8 @@ export function App() {
   const [represados, setRepresados] = useState<Represados | null>(null);
   // Conferência dos represados: uma caixa por vez (chave = grupo dos partilhados, ou o nome sem acento/maiúscula).
   const [selecionado, setSelecionado] = useState<string | null>(null);
+  // Caixa aberta na página Represados (null = os cartões de todos os proprietários).
+  const [aberto, setAberto] = useState<string | null>(null);
   const [usados, setUsados] = useState<number[]>([]);
   const [avisoRepresados, setAvisoRepresados] = useState("");
   // Proprietários represados que a conferência do dia separou e guardou no banco.
@@ -249,6 +251,7 @@ export function App() {
     try {
       await apagarRepresados(usados);
       limparTudo();
+      setAberto(null);
       setAvisoRepresados("Conferência concluída: os dados foram apagados do banco.");
       await recarregarRepresados();
     } catch (e) {
@@ -266,6 +269,7 @@ export function App() {
     if ((casos || todos.length) && !confirm("Trocar de página apaga os arquivos e o resultado atuais. Continuar?"))
       return;
     limparTudo();
+    setAberto(null);
     setPagina(novo);
   };
 
@@ -402,42 +406,59 @@ export function App() {
                       ) : !grupos.length ? (
                         <p className="caso__meta">Nenhum proprietário represado cadastrado (tabela represados_nomes no Supabase).</p>
                       ) : (
-                        grupos.map((g) => (
-                          <details key={g.chave} className="caso">
-                            <summary>
-                              <strong>{g.nome}</strong> ·{" "}
-                              {g.repasses.length
-                                ? `${g.contratos.length} contrato(s), ${g.repasses.length} extrato(s), ${reais(g.repasses.reduce((n, r) => n + r.dados.pago, 0))}`
-                                : "nada guardado"}
-                            </summary>
-                            {g.contratos.map((c) => (
-                              <div key={c.contrato}>
-                                <h3>Contrato {c.contrato}</h3>
-                                <ul className="seletor__lista">
-                                  {c.repasses.map((r) => (
-                                    <li key={r.id}>
-                                      {g.nome.includes(" + ") && `${r.dados.proprietario} · `}Extrato nº {r.dados.numero} · competência {r.dados.competencia} · venc. {r.dados.vencimento} ·{" "}
-                                      <strong>{reais(r.dados.pago)}</strong>
-                                    </li>
-                                  ))}
-                                  {c.recibos.map((r) => (
-                                    <li key={r.id}>
-                                      Recibo · venc. {r.dados.vencimento} · inquilino {r.dados.locatario} · pago {reais(r.dados.pago)}
-                                    </li>
-                                  ))}
-                                  {!c.recibos.length && <li className="caso__meta">Sem recibo guardado para este contrato.</li>}
-                                </ul>
+                        (() => {
+                          const resumo = (g: (typeof grupos)[number]) =>
+                            g.repasses.length
+                              ? `${g.contratos.length} contrato(s) · ${g.repasses.length} extrato(s) · ${reais(g.repasses.reduce((n, r) => n + r.dados.pago, 0))}`
+                              : "Nada guardado";
+                          const g = grupos.find((x) => x.chave === aberto);
+                          if (!g)
+                            return (
+                              <div className="cartoes">
+                                {grupos.map((x) => (
+                                  <button key={x.chave} type="button" className="cartao" onClick={() => setAberto(x.chave)}>
+                                    <strong className="cartao__nome">{x.nome}</strong>
+                                    <span className="caso__meta">{resumo(x)}</span>
+                                  </button>
+                                ))}
                               </div>
-                            ))}
-                            {g.repasses.length > 0 && (
-                              <div className="acoes">
-                                <button type="button" className="botao" onClick={() => conferirRepresado(g.chave)}>
-                                  Conferir {g.nome}
-                                </button>
-                              </div>
-                            )}
-                          </details>
-                        ))
+                            );
+                          return (
+                            <>
+                              <button type="button" className="botao botao--texto" onClick={() => setAberto(null)}>
+                                ← Voltar para os proprietários
+                              </button>
+                              <h2>{g.nome}</h2>
+                              <p className="caso__meta">{resumo(g)}</p>
+                              {g.contratos.map((c) => (
+                                <div key={c.contrato} className="caso">
+                                  <h3>Contrato {c.contrato}</h3>
+                                  <ul className="seletor__lista">
+                                    {c.repasses.map((r) => (
+                                      <li key={r.id}>
+                                        {g.nome.includes(" + ") && `${r.dados.proprietario} · `}Extrato nº {r.dados.numero} · competência {r.dados.competencia} · venc. {r.dados.vencimento} ·{" "}
+                                        <strong>{reais(r.dados.pago)}</strong>
+                                      </li>
+                                    ))}
+                                    {c.recibos.map((r) => (
+                                      <li key={r.id}>
+                                        Recibo · venc. {r.dados.vencimento} · inquilino {r.dados.locatario} · pago {reais(r.dados.pago)}
+                                      </li>
+                                    ))}
+                                    {!c.recibos.length && <li className="caso__meta">Sem recibo guardado para este contrato.</li>}
+                                  </ul>
+                                </div>
+                              ))}
+                              {g.repasses.length > 0 && (
+                                <div className="acoes">
+                                  <button type="button" className="botao" onClick={() => conferirRepresado(g.chave)}>
+                                    Conferir {g.nome}
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()
                       )}
                     </section>
                   )}
