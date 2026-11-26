@@ -102,7 +102,7 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   `represados_nomes` (26/11/2026: caixa com os nomes juntos e cada extrato mostra de quem é). A página mostra um cartão por caixa;
   clicar abre só os extratos daquela caixa, com "Voltar para os proprietários". No relatório de repasses, um campo
   "Represados desta leva (fora da soma)" lista só os extratos separados naquela conferência (contrato, proprietário,
-  valor), só na tela (não imprime) e só em memória; "Concluir e apagar do banco" apaga só os documentos daquele nome. Acesso só pelo Worker (`worker/represados.ts`, Secrets
+  valor), só na tela (não imprime) e só em memória; "Concluir e apagar do banco" apaga só os documentos daquela caixa. Acesso só pelo Worker (`worker/represados.ts`, Secrets
   `SUPABASE_URL`/`SUPABASE_KEY`, chave `sb_secret_…` só no header `apikey`). RLS ligado sem políticas, sem permissão para
   `anon`/`authenticated`; o projeto não dá acesso automático às tabelas novas, então `service_role` recebe só o necessário
   (`supabase/represados.sql`; sem `truncate`/`references`/`trigger`, que o Supabase dá por padrão, e a função
