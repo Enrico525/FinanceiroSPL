@@ -103,7 +103,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   diferentes tem vários grupos separados por vírgula (ex.: "Amaral, Teixeira") e aparece em cada caixa; o extrato vai
   para a menor caixa que tem todos os proprietários com extrato do mesmo contrato, senão para a primeira
   (`caixaDoExtrato`). Caso real: tio em "Amaral" (com a esposa) e "Teixeira" (com os sobrinhos); sobrinhos em
-  "Teixeira" e "Teixeira sobrinhos" (só eles). A página mostra um cartão por caixa;
+  "Teixeira" e "Teixeira sobrinhos" (só eles). A página mostra um cartão por caixa; As metades de contrato partilhado vêm sempre no mesmo dia
+  (mesmo em PDFs separados), então a caixa escolhida pelos extratos guardados é confiável.
   clicar abre só os extratos daquela caixa, com "Voltar para os proprietários". No relatório de repasses, um campo
   "Represados desta leva (fora da soma)" lista só os extratos separados naquela conferência (contrato, proprietário,
   valor), só na tela (não imprime) e só em memória. Na caixa partilhada (mais de um nome), o relatório tem "Só <nome>" e
