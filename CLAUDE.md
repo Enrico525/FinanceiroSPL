@@ -122,6 +122,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 
 ## Pendências (aguardando o negócio)
 
+- Bugs e pontos de atenção do scan de 26/11/2026 em `docs/BUGS.md`, a decidir.
+
 - Juros de condomínio são repassados mas **não** entram na base da taxa ADM (hoje o código soma todos os juros):
   falta saber como a linha aparece no extrato e se a multa de condomínio segue a mesma regra. Perguntas para o
   financeiro em `docs/REGRAS-PARA-FINANCEIRO.md`.

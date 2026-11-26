@@ -9,7 +9,7 @@ Navegador (React)
   ├─ src/nido/conferir.ts: regras de conferência e totais por conta (docs/REGRAS-CONFERENCIA.md), sem IA
   ├─ src/components/Resultado.tsx: resultado e relatório (por conta, dados bancários, lançamentos manuais)
   └─ Estado apenas em memória
-        │ HTTPS · só login/sessão (a conferência não envia dados)
+        │ HTTPS · login/sessão e os dados lidos dos represados (a conferência do dia não envia o resto)
         ▼
 Cloudflare Worker (Static Assets + /api/* + /auth/*)
   ├─ /auth/*: login por e-mail + senha conferidos no Supabase Auth, sessão em cookie assinado
@@ -28,7 +28,7 @@ OpenAI
 
 | Rota | Método | Descrição |
 |---|---|---|
-| `/auth/entrar` | POST | `{ nome, senha }` → cria a sessão (8 h). Erro igual para nome ou senha errados |
+| `/auth/entrar` | POST | `{ email, senha }` → confere no Supabase Auth e cria a sessão (8 h). Erro igual para e-mail ou senha errados |
 | `/auth/sair` | POST | Apaga a sessão |
 | `/api/eu` | GET | Nome do usuário autenticado |
 | `/api/analisar` | POST | Recebe `PedidoAnalise`, devolve `ResultadoAnalise` |

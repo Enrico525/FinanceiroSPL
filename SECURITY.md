@@ -43,7 +43,7 @@
 - O relatório (tela e impressão) mostra CPF/CNPJ e dados bancários dos proprietários. O app não guarda nada, mas o
   PDF impresso ou salvo fica com o usuário: tratar como documento sigiloso.
 - A limpeza de memória no navegador é de melhor esforço.
-- Sessões não podem ser derrubadas individualmente (sem banco): remover a pessoa da lista a bloqueia; trocar `SESSION_SECRET` derruba todos.
+- Sessões não podem ser derrubadas individualmente (sem banco): apagar ou bloquear a usuária no Supabase Auth corta o acesso na hora; trocar `SESSION_SECRET` derruba todos.
 - Sem verificação em duas etapas (pode ser acrescentada com código de app autenticador) e sem “esqueci a senha” automático.
 - Hash rápido (SHA-256) só é seguro porque as senhas são geradas e longas. Nunca aceitar senha escolhida por pessoa sem trocar para PBKDF2/Argon2.
 - Arquivos estáticos (HTML/JS/CSS/logo) são acessíveis sem login; não contêm dados.

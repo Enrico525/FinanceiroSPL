@@ -10,7 +10,7 @@ Conferência interna de documentos financeiros da imobiliária por funcionários
 
 Conteúdo textual de documentos financeiros, que pode incluir dados pessoais de clientes, proprietários,
 inquilinos, funcionários e fornecedores (nomes, CPF/CNPJ, valores, endereços e dados bancários dos proprietários:
-banco, agência e conta). Nome do usuário para login.
+banco, agência e conta). E-mail da usuária para login (conta no Supabase Auth).
 
 ## Fluxo e retenção
 
@@ -40,5 +40,5 @@ Logs técnicos contêm apenas categoria de erro e rota, sem conteúdo.
 - Transferência internacional (art. 33) e contratos (DPA) com Cloudflare e OpenAI.
 - Transparência aos titulares e canal de atendimento aos direitos (art. 18).
 - Encarregado (DPO) e canal de contato: **a definir**.
-- Necessidade de registro de auditoria (quem analisou o quê) versus a regra de não persistir.
+- Registro de auditoria: só o log dos represados (`represados_log`, 30 dias). Avaliar se é preciso registrar quem conferiu o resto.
 - Guarda e descarte dos relatórios impressos ou salvos em PDF, que trazem CPF/CNPJ e dados bancários.
