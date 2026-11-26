@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
 import { CONTA_BRADESCO, CONTA_ITAU, chaveRepasse, contaDeSaida, contaDoRepasse, reais, totais, type Caso, type Conta, type JaPago, type Manual } from "../nido/conferir";
-import { valorDigitado } from "../nido/ler";
+import { valorDigitado, type Repasse } from "../nido/ler";
 import type { Modo } from "../App";
 import { normalizarNome } from "../../shared/credenciais";
 
@@ -102,11 +102,12 @@ type PropsRelatorio = {
   aoRestaurar: () => void;
   manuais: Manual[];
   aoMudarManuais: (m: Manual[]) => void;
+  represados: Repasse[];
 };
 
 const NOME_CONTA = { [CONTA_ITAU]: "Itaú", [CONTA_BRADESCO]: "Bradesco" } as const;
 
-function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, aoRemoverRepasse, aoRestaurar, manuais, aoMudarManuais }: PropsRelatorio) {
+function Relatorio({ casos, represados, secoes, escolhas, aoEscolher, aoFechar, removidos, aoRemoverRepasse, aoRestaurar, manuais, aoMudarManuais }: PropsRelatorio) {
   const titulo = Object.fromEntries(SECOES.map((s) => [s.status, s.titulo]));
   // Relatório separado por conta de saída: com "Bradesco" ou "Itaú" escolhido, tudo (totais, lançamentos manuais,
   // contratos e impressão) mostra só os repasses daquela conta. Sem banco e sem conta escolhida: só em "Todos".
@@ -436,6 +437,40 @@ function Relatorio({ casos, secoes, escolhas, aoEscolher, aoFechar, removidos, a
           </section>
         );
       })}
+      {/* Represados: separados antes da conferência, fora de todos os totais; só para saber quem ficou segurado. */}
+      {!filtro && represados.length > 0 && (
+        <section className="pagamentos">
+          <h3>
+            Represados (fora da soma) · {represados.length} extrato(s) · {reais(represados.reduce((n, r) => n + r.pago, 0))}
+          </h3>
+          <table className="pagamentos__tabela">
+            <thead>
+              <tr>
+                <th scope="col">Contrato</th>
+                <th scope="col">Proprietário</th>
+                <th scope="col">Extrato</th>
+                <th scope="col">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...represados]
+                .sort((a, b) => Number(a.contrato) - Number(b.contrato))
+                .map((r) => (
+                  <tr key={`${r.numero}|${r.proprietario}`}>
+                    <td>
+                      <strong className="pagamentos__destaque">{r.contrato}</strong>
+                    </td>
+                    <td>{r.proprietario}</td>
+                    <td>
+                      nº {r.numero} · comp. {r.competencia} · venc. {r.vencimento}
+                    </td>
+                    <td className="pagamentos__valor">{reais(r.pago)}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </section>
+      )}
     </div>
   );
 }
@@ -498,9 +533,11 @@ type PropsResultado = {
   removidos: number;
   aoRemoverRepasse: (id: string) => void;
   aoRestaurar: () => void;
+  /** Extratos dos represados separados nesta conferência: só aparecem no relatório, fora da soma. */
+  represados: Repasse[];
 };
 
-export function Resultado({ casos: originais, modo, jaPagos, aoLiberar, removidos, aoRemoverRepasse, aoRestaurar }: PropsResultado) {
+export function Resultado({ casos: originais, modo, represados, jaPagos, aoLiberar, removidos, aoRemoverRepasse, aoRestaurar }: PropsResultado) {
   const [relatorio, setRelatorio] = useState(false);
   // Some ao começar outra conferência: nada é guardado.
   const [aceitos, setAceitos] = useState<Set<string>>(new Set());
@@ -535,6 +572,7 @@ export function Resultado({ casos: originais, modo, jaPagos, aoLiberar, removido
         aoRestaurar={aoRestaurar}
         manuais={manuais}
         aoMudarManuais={setManuais}
+        represados={represados}
       />
       </>
     );

@@ -520,7 +520,7 @@ describe("separarRepresados", () => {
     expect(s.ficam.recibos.map((r) => r.contrato)).toEqual(["2", "3", "4"]);
     expect(s.guardar.repasses).toEqual([rA, rC1]);
     expect(s.guardar.recibos.map((r) => r.contrato)).toEqual(["1", "3"]);
-    expect(s.proprietarios).toEqual(["JOSÉ DA SILVA", "JOSE DA SILVA"]);
+    expect(s.separados).toEqual([rA, rC1]);
   });
 
   it("não guarda de novo a mesma cópia (mesmo vinda de outro arquivo ou com campos em outra ordem); versão nova é guardada", () => {
