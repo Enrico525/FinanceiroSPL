@@ -38,8 +38,12 @@ export async function guardarRepresados(env: Ambiente, pedido: PedidoGuardar, us
   await supabase(env, "represados", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(linhas) });
 }
 
-export async function apagarRepresados(env: Ambiente, { ids }: PedidoApagar): Promise<void> {
-  await supabase(env, `represados?id=in.(${ids.join(",")})`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+/** `usuario` vai no header X-Usuario: o gatilho do banco grava no log quem apagou (`represados_log.feito_por`). */
+export async function apagarRepresados(env: Ambiente, { ids }: PedidoApagar, usuario: string): Promise<void> {
+  await supabase(env, `represados?id=in.(${ids.join(",")})`, {
+    method: "DELETE",
+    headers: { Prefer: "return=minimal", "X-Usuario": usuario },
+  });
 }
 
 /** Cron: uma leitura mínima conta como atividade e impede o Supabase grátis de pausar o projeto (7 dias sem uso). */
