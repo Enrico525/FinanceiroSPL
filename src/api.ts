@@ -44,7 +44,9 @@ export const entrar = (email: string, senha: string) =>
 
 export const sair = () => chamar<{ ok: true }>("/auth/sair", { method: "POST", headers: DO_APP, body: "{}" });
 
-export const listarRepresados = () => chamar<{ itens: Represado[]; nomes: string[] }>("/api/represados");
+/** `grupos`: nome → grupo dos proprietários partilhados (mesmo grupo = uma caixa só). */
+export type Represados = { itens: Represado[]; nomes: string[]; grupos: Record<string, string> };
+export const listarRepresados = () => chamar<Represados>("/api/represados");
 
 export const guardarRepresados = (pedido: PedidoGuardar) =>
   chamar<{ ok: true }>("/api/represados", { method: "POST", headers: DO_APP, body: JSON.stringify(pedido) });
