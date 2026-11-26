@@ -25,4 +25,8 @@ revoke all on public.represados_nomes from anon, authenticated;
 grant select, insert, delete on public.represados to service_role;
 grant usage on sequence public.represados_id_seq to service_role;
 grant select on public.represados_nomes to service_role;
+-- O Supabase dá estas por padrão; o Worker não usa (truncate apagaria tudo de uma vez).
+revoke truncate, references, trigger on public.represados, public.represados_nomes from service_role;
+-- Função criada pelo Supabase (liga o RLS em tabela nova): ninguém de fora precisa executá-la.
+revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
 -- Exemplo: insert into public.represados_nomes (nome) values ('NOME COMO VEM NO EXTRATO');
