@@ -90,7 +90,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Aviso de versão nova (11/2026): a cada 30 s e ao voltar para a aba, o app compara o `/assets/index-*.js` do
   index.html do servidor com o carregado (`AvisoAtualizacao.tsx`) e mostra "Atualizar agora". Atualizar limpa a tela.
 - Represados (11/2026): ~11 proprietários pedem para segurar os repasses. A lista de nomes fica no Supabase (tabela
-  `represados_nomes`, editada no painel; nomes reais nunca no código). Ao "Conferir" (e "Analisar de novo"), o app
+  `represados_nomes`, editada no painel ou pelo MCP do Supabase; nomes reais nunca no código nem neste arquivo; 11 cadastrados em 26/11/2026).
+  O nome tem de ser igual ao do extrato, ignorando acento, maiúscula, espaço e pontuação (`nomeSimples`): empresa vai
+  com o nome completo ("… LTDA"), e em contrato partilhado cada proprietário é cadastrado separado. Ao "Conferir" (e "Analisar de novo"), o app
   separa **sozinho** os extratos desses proprietários e os recibos só deles (`separarRepresados`; recibo de contrato
   dividido com quem não é represado fica nos dois), guarda os dados lidos (nunca o PDF) na tabela `represados` e tira da
   conferência do dia. Se o banco falhar, a conferência não começa. Cópia idêntica não é guardada duas vezes. Projeto
