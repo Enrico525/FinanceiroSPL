@@ -224,6 +224,7 @@ export function App() {
       const contratos = [...new Set(g.repasses.map((r) => r.dados.contrato))].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
       return {
         chave,
+        nomes,
         ...g,
         contratos: contratos.map((c) => ({
           contrato: c,
@@ -540,6 +541,7 @@ export function App() {
                       casos={casos}
                       modo={modo}
                       represados={pagina === "represados" ? [] : separados}
+                      donos={pagina === "represados" && grupoEmTela ? grupoEmTela.nomes : []}
                       removidos={removidos.size}
                       jaPagos={jaPagos.map((j) => ({ ...j, liberado: liberados.has(j.id) }))}
                       aoLiberar={(id, sim) => setLiberados((s) => { const n = new Set(s); if (sim) n.add(id); else n.delete(id); return n; })}
