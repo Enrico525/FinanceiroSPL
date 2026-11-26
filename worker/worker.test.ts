@@ -237,6 +237,14 @@ describe("represados (Supabase)", () => {
     expect((doBanco()[0].init.headers as Record<string, string>).apikey).toBe("sb_secret_teste");
   });
 
+  it("conta o limite do corpo em bytes: acento ocupa dois", async () => {
+    falsoSupabase();
+    // ~2,1 milhões de caracteres, mas ~4,2 MB: passa do limite de 4 MB.
+    const r = await pedir("/api/represados", { recibos: [{ ...recibo, locador: "é".repeat(2_100_000) }], repasses: [] });
+    expect(await r.json()).toEqual({ erro: "texto_muito_extenso" });
+    expect(doBanco()).toHaveLength(0);
+  });
+
   it("recusa dados fora do formato e lote vazio, sem chamar o banco", async () => {
     falsoSupabase();
     expect((await pedir("/api/represados", { recibos: [{ ...recibo, extra: 1 }], repasses: [] })).status).toBe(400);

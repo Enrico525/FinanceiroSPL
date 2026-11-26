@@ -9,5 +9,3 @@ Lista para ver depois. Nada aqui foi corrigido.
    "Teixeira sobrinhos"; se depois chegar o do tio, os dois vão para "Teixeira".
 2. **Log: `guardado_por` no "apagou"** mostra quem guardou o documento, não quem concluiu (o Worker não manda a
    usuária no DELETE).
-3. **Limite do corpo no Worker** (`lerCorpo`, `worker/index.ts`) compara caracteres com um limite em bytes; com
-   acentos, passa um pouco mais que 4 MB. Sem risco real.
