@@ -258,6 +258,7 @@ describe("represados (Supabase)", () => {
     expect((await pedir("/api/represados/apagar", { ids: [3, 7] })).status).toBe(200);
     expect(doBanco()[0].url).toBe("https://banco.exemplo.supabase.co/rest/v1/represados?id=in.(3,7)");
     expect(doBanco()[0].init.method).toBe("DELETE");
+    expect((doBanco()[0].init.headers as Record<string, string>)["X-Usuario"]).toBe(EMAIL);
     expect(await (await pedir("/api/represados")).json()).toEqual({ itens: [], nomes: [], grupos: {} });
     expect(doBanco().map((c) => c.url).slice(1)).toEqual([
       "https://banco.exemplo.supabase.co/rest/v1/represados?select=id,tipo,dados&order=id",

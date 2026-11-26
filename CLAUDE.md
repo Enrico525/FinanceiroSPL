@@ -116,7 +116,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   `rls_auto_enable` criada pelo Supabase sem `execute` para `public`/`anon`/`authenticated`). Alerta "RLS sem
   políticas" é intencional; proteção contra senha vazada não existe no plano grátis. Cron a cada 3 dias lê a tabela para o Supabase grátis não pausar.
   Log (26/11/2026): gatilho no banco grava em `represados_log` cada documento que sobe ("guardou") ou é apagado
-  ("apagou"): quando, tipo, contrato, nº do extrato e quem guardou; sem nome nem valor. Cada gravação apaga o log com
+  ("apagou"): quando, tipo, contrato, nº do extrato, quem guardou e `feito_por` (no "apagou", quem concluiu: o Worker
+  manda no header `X-Usuario`); sem nome nem valor. Cada gravação apaga o log com
   mais de 30 dias. Ver no Table Editor do Supabase; o app não lê o log (sem permissão nem para `service_role`).
 - Secrets por linha de comando (11/2026): gravar com `printf '%s' valor | npx wrangler secret put NOME` ou digitando no
   prompt; `"valor" | ...` no PowerShell acrescenta quebra de linha e quebrou a `SUPABASE_URL` (login e represados com erro 500).
@@ -124,7 +125,6 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 
 ## Pendências (aguardando o negócio)
 
-- Bugs e pontos de atenção do scan de 26/11/2026 em `docs/BUGS.md`, a decidir.
 
 - Juros de condomínio são repassados mas **não** entram na base da taxa ADM (hoje o código soma todos os juros):
   falta saber como a linha aparece no extrato e se a multa de condomínio segue a mesma regra. Perguntas para o

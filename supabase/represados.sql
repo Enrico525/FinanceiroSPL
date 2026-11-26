@@ -35,7 +35,8 @@ revoke execute on function public.rls_auto_enable() from public, anon, authentic
 -- Exemplo: insert into public.represados_nomes (nome) values ('NOME COMO VEM NO EXTRATO');
 
 -- Log do que sobe e do que é apagado dos represados, para conferir no Table Editor (represados_log).
--- Sem nome nem valor: só quando, ação, tipo, contrato, nº do extrato e quem guardou. Guarda 30 dias:
+-- Sem nome nem valor: só quando, ação, tipo, contrato, nº do extrato, quem guardou e quem fez (no "apagou", quem
+-- concluiu: o Worker manda no header X-Usuario). Guarda 30 dias:
 -- cada gravação apaga o que tiver mais que isso.
 create table if not exists public.represados_log (
   id bigint generated always as identity primary key,
@@ -45,19 +46,24 @@ create table if not exists public.represados_log (
   tipo text not null,
   contrato text,
   extrato text,
-  guardado_por text
+  guardado_por text,
+  feito_por text
 );
 alter table public.represados_log enable row level security;
 revoke all on public.represados_log from anon, authenticated, service_role;
 
 create or replace function public.represados_registrar() returns trigger
 language plpgsql security definer set search_path = '' as $$
-declare r public.represados := coalesce(new, old);
+declare
+  r public.represados := coalesce(new, old);
+  -- Quem apagou vem do Worker no header X-Usuario (o PostgREST expõe os headers em minúsculas).
+  quem text := current_setting('request.headers', true)::json->>'x-usuario';
 begin
   delete from public.represados_log where quando < now() - interval '30 days';
-  insert into public.represados_log (acao, represado_id, tipo, contrato, extrato, guardado_por)
+  insert into public.represados_log (acao, represado_id, tipo, contrato, extrato, guardado_por, feito_por)
   values (case tg_op when 'INSERT' then 'guardou' else 'apagou' end, r.id, r.tipo,
-          r.dados->>'contrato', r.dados->>'numero', r.guardado_por);
+          r.dados->>'contrato', r.dados->>'numero', r.guardado_por,
+          case tg_op when 'INSERT' then r.guardado_por else quem end);
   return null;
 end $$;
 revoke execute on function public.represados_registrar() from public, anon, authenticated, service_role;

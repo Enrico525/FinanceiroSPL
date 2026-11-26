@@ -77,7 +77,7 @@ export default {
         } else {
           const pedido = PedidoApagar.safeParse(lido.corpo);
           if (!pedido.success) return erro("requisicao_invalida");
-          await apagarRepresados(env, pedido.data);
+          await apagarRepresados(env, pedido.data, usuario);
         }
         return json({ ok: true });
       }
