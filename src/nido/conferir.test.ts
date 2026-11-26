@@ -540,13 +540,19 @@ describe("separarRepresados", () => {
 });
 
 describe("caixaDoExtrato", () => {
-  it("vai para a caixa de quem divide o contrato; sem ninguém, a primeira", () => {
-    const outros = [
-      { contrato: "1", caixas: ["grupo:a"] },
-      { contrato: "2", caixas: ["grupo:b"] },
-    ];
-    expect(caixaDoExtrato(["grupo:a", "grupo:b"], "2", outros)).toBe("grupo:b");
-    expect(caixaDoExtrato(["grupo:a", "grupo:b"], "1", outros)).toBe("grupo:a");
-    expect(caixaDoExtrato(["grupo:a", "grupo:b"], "3", outros)).toBe("grupo:a");
+  // tio em "amaral" (com a esposa) e "teixeira" (com os sobrinhos); sobrinhos em "teixeira" e "sobrinhos" (só eles).
+  const tamanho = (k: string) => ({ amaral: 2, teixeira: 4, sobrinhos: 3 })[k] ?? 0;
+  const tio = ["amaral", "teixeira"];
+  const sobrinho = ["teixeira", "sobrinhos"];
+  it("vai para a menor caixa com todos os donos do contrato", () => {
+    expect(caixaDoExtrato(tio, [sobrinho], tamanho)).toBe("teixeira");
+    expect(caixaDoExtrato(sobrinho, [tio, sobrinho], tamanho)).toBe("teixeira");
+    expect(caixaDoExtrato(sobrinho, [sobrinho], tamanho)).toBe("sobrinhos");
+    expect(caixaDoExtrato(sobrinho, [], tamanho)).toBe("sobrinhos");
+    expect(caixaDoExtrato(tio, [["amaral"]], tamanho)).toBe("amaral");
+    expect(caixaDoExtrato(tio, [], tamanho)).toBe("amaral");
+  });
+  it("sem caixa com todos, fica na primeira", () => {
+    expect(caixaDoExtrato(tio, [["outra"]], tamanho)).toBe("amaral");
   });
 });

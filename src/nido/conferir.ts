@@ -35,11 +35,11 @@ export const nomeSimples = (s: string) =>
     .replace(/[^a-z0-9]/g, "");
 
 /**
- * Represados: quem está em mais de uma caixa (ex.: um contrato com um parente, outro com outros) tem o extrato posto
- * na caixa em que outro proprietário tem extrato do mesmo contrato; sem isso, na primeira caixa dele.
+ * Represados: quem está em mais de uma caixa tem o extrato posto na menor caixa que tem todos os outros proprietários
+ * com extrato do mesmo contrato (`outros`: as caixas de cada um); sem caixa assim, na primeira dele.
  */
-export const caixaDoExtrato = (caixas: string[], contrato: string, outros: { contrato: string; caixas: string[] }[]) =>
-  caixas.find((k) => outros.some((o) => o.contrato === contrato && o.caixas.includes(k))) ?? caixas[0];
+export const caixaDoExtrato = (caixas: string[], outros: string[][], tamanho: (caixa: string) => number) =>
+  caixas.filter((k) => outros.every((o) => o.includes(k))).sort((a, b) => tamanho(a) - tamanho(b))[0] ?? caixas[0];
 
 const ehPagamentoAdm = (h: string) => /^taxa adm\.?\/aluguel/i.test(h);
 const ehIntermediacao = (h: string) => /^taxa (de )?intermedia/i.test(h);

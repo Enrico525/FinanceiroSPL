@@ -218,9 +218,9 @@ export function App() {
     for (const r of extratos) {
       const simples = nomeSimples(r.dados.proprietario);
       const outros = extratos
-        .filter((o) => nomeSimples(o.dados.proprietario) !== simples)
-        .map((o) => ({ contrato: o.dados.contrato, caixas: chaves(o.dados.proprietario) }));
-      const g = caixa(caixaDoExtrato(chaves(r.dados.proprietario), r.dados.contrato, outros));
+        .filter((o) => o.dados.contrato === r.dados.contrato && nomeSimples(o.dados.proprietario) !== simples)
+        .map((o) => chaves(o.dados.proprietario));
+      const g = caixa(caixaDoExtrato(chaves(r.dados.proprietario), outros, (k) => porChave.get(k)?.nomes.length ?? 0));
       if (!g.nomes.some((n) => nomeSimples(n) === simples)) g.nomes.push(r.dados.proprietario);
       g.repasses.push(r);
     }
