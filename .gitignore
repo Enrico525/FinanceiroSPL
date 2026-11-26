@@ -12,3 +12,4 @@ worker-configuration.d.ts
 # Nunca versionar documentos reais
 *.pdf
 !tests/fixtures/*.pdf
+.mcp.json
