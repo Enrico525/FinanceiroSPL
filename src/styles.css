@@ -136,6 +136,13 @@ input:focus-visible + .botao, label.botao:focus-within { outline: 3px solid var(
 .placar__item strong { font-size: 1.3rem; margin-right: 0.25rem; font-variant-numeric: tabular-nums; }
 .placar__item--divergencia { background: var(--vinho); color: var(--creme); border-color: var(--vinho); }
 .resultado ul.casos { list-style: none; padding: 0; margin-top: 0.75rem; }
+.cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem; }
+.cartao {
+  display: flex; flex-direction: column; gap: 0.4rem; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  background: var(--creme); border: 2px solid var(--linha); border-radius: var(--raio); padding: 1rem 1.25rem;
+}
+.cartao:hover, .cartao:focus-visible { border-color: var(--vinho); }
+.cartao__nome { color: var(--vinho); font-size: 1.05rem; }
 .caso { border-top: 1px solid var(--linha); padding-top: 0.6rem; }
 .resultado .caso + .caso { margin-top: 0.6rem; }
 .caso p { margin: 0 0 0.25rem; }
