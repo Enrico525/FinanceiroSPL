@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conferir, conferirSem, idRepasse, jaPagosAntes, separarRepresados, taxaAdmEsperada, totais } from "./conferir";
+import { caixaDoExtrato, conferir, conferirSem, idRepasse, jaPagosAntes, separarRepresados, taxaAdmEsperada, totais } from "./conferir";
 import type { LinhaRepasse, Recibo, Repasse } from "./ler";
 
 const V = "05/11/2026";
@@ -536,5 +536,17 @@ describe("separarRepresados", () => {
     const s = separarRepresados(recibos, [rA, rB], [], []);
     expect(s.ficam).toEqual({ recibos, repasses: [rA, rB] });
     expect(s.guardar).toEqual({ recibos: [], repasses: [] });
+  });
+});
+
+describe("caixaDoExtrato", () => {
+  it("vai para a caixa de quem divide o contrato; sem ninguém, a primeira", () => {
+    const outros = [
+      { contrato: "1", caixas: ["grupo:a"] },
+      { contrato: "2", caixas: ["grupo:b"] },
+    ];
+    expect(caixaDoExtrato(["grupo:a", "grupo:b"], "2", outros)).toBe("grupo:b");
+    expect(caixaDoExtrato(["grupo:a", "grupo:b"], "1", outros)).toBe("grupo:a");
+    expect(caixaDoExtrato(["grupo:a", "grupo:b"], "3", outros)).toBe("grupo:a");
   });
 });

@@ -4,7 +4,7 @@ import type { Represado } from "../shared/contrato";
 import { lerPdf, ErroLeitura } from "./pdf/extrair";
 import { juntarPdfs } from "./pdf/juntar";
 import { extratosNaoLidos, lerRecibos, lerRepasses, type Recibo, type Repasse } from "./nido/ler";
-import { conferirSem, idRepasse, jaPagosAntes, nomeSimples, reais, separarRepresados } from "./nido/conferir";
+import { caixaDoExtrato, conferirSem, idRepasse, jaPagosAntes, nomeSimples, reais, separarRepresados } from "./nido/conferir";
 import { AvisoAtualizacao } from "./components/AvisoAtualizacao";
 import { SeletorPdf, type ArquivoLido } from "./components/SeletorPdf";
 import { Resultado } from "./components/Resultado";
@@ -204,18 +204,23 @@ export function App() {
   const grupos = (() => {
     const itens = represados?.itens ?? [];
     const recibos = itens.flatMap((r) => (r.tipo === "recibo" ? [r] : []));
-    const chaveDoNome = new Map<string, string>();
+    // `grupo` pode ter vários, separados por vírgula: o nome entra em cada uma dessas caixas.
+    const chavesDoNome = new Map<string, string[]>();
     for (const nome of represados?.nomes ?? []) {
-      const grupo = represados?.grupos[nome];
-      chaveDoNome.set(nomeSimples(nome), grupo ? `grupo:${nomeSimples(grupo)}` : nomeSimples(nome));
+      const gs = (represados?.grupos[nome] ?? "").split(",").map((g) => nomeSimples(g)).filter(Boolean);
+      chavesDoNome.set(nomeSimples(nome), gs.length ? gs.map((g) => `grupo:${g}`) : [nomeSimples(nome)]);
     }
+    const chaves = (proprietario: string) => chavesDoNome.get(nomeSimples(proprietario)) ?? [nomeSimples(proprietario)];
     const porChave = new Map<string, { nomes: string[]; repasses: Extract<Represado, { tipo: "repasse" }>[] }>();
     const caixa = (chave: string) => porChave.get(chave) ?? porChave.set(chave, { nomes: [], repasses: [] }).get(chave)!;
-    for (const nome of represados?.nomes ?? []) caixa(chaveDoNome.get(nomeSimples(nome))!).nomes.push(nome);
-    for (const r of itens) {
-      if (r.tipo !== "repasse") continue;
+    for (const nome of represados?.nomes ?? []) for (const k of chaves(nome)) caixa(k).nomes.push(nome);
+    const extratos = itens.flatMap((r) => (r.tipo === "repasse" ? [r] : []));
+    for (const r of extratos) {
       const simples = nomeSimples(r.dados.proprietario);
-      const g = caixa(chaveDoNome.get(simples) ?? simples);
+      const outros = extratos
+        .filter((o) => nomeSimples(o.dados.proprietario) !== simples)
+        .map((o) => ({ contrato: o.dados.contrato, caixas: chaves(o.dados.proprietario) }));
+      const g = caixa(caixaDoExtrato(chaves(r.dados.proprietario), r.dados.contrato, outros));
       if (!g.nomes.some((n) => nomeSimples(n) === simples)) g.nomes.push(r.dados.proprietario);
       g.repasses.push(r);
     }

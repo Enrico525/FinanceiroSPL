@@ -99,7 +99,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   Supabase separado (usado só pelos represados e pelo login; o cron evita a pausa do plano grátis); todas as usuárias veem os mesmos. A página
   "Represados" não tem upload: lista cada nome com os dados guardados separados por contrato, e a conferência roda
   **uma caixa por vez** (nunca todos juntos): um proprietário, ou os partilhados com o mesmo `grupo` na
-  `represados_nomes` (26/11/2026: caixa com os nomes juntos e cada extrato mostra de quem é). A página mostra um cartão por caixa;
+  `represados_nomes` (26/11/2026: caixa com os nomes juntos e cada extrato mostra de quem é). Quem divide contratos com grupos
+  diferentes tem vários grupos separados por vírgula (ex.: "Amaral, Teixeira") e aparece em cada caixa; o extrato vai
+  para a caixa em que outro proprietário tem extrato do mesmo contrato, senão para a primeira (`caixaDoExtrato`). A página mostra um cartão por caixa;
   clicar abre só os extratos daquela caixa, com "Voltar para os proprietários". No relatório de repasses, um campo
   "Represados desta leva (fora da soma)" lista só os extratos separados naquela conferência (contrato, proprietário,
   valor), só na tela (não imprime) e só em memória. Na caixa partilhada (mais de um nome), o relatório tem "Só <nome>" e
