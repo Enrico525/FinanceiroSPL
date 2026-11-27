@@ -6,7 +6,8 @@ import type { Modo } from "../App";
 import { normalizarNome } from "../../shared/credenciais";
 
 // O NIDO às vezes traz a Descrição só com "***" (cadastro sem observação): sem letra nem número, não conta.
-const descricaoUtil = (d: string) => (/[\p{L}\d]/u.test(d) ? d : "");
+// O cadastro do NIDO às vezes numera o titular ("1 - José", 15188): o número sai.
+const descricaoUtil = (d: string) => (/[\p{L}\d]/u.test(d) ? d.replace(/^\s*\d+\s*[-–]\s*/, "") : "");
 
 const ROTULO = { divergencia: "Divergência", manual: "Conferir", aviso: "Aviso" } as const;
 const PESO = { divergencia: 0, manual: 1, aviso: 2 } as const;
