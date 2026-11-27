@@ -41,7 +41,8 @@ export const nomeSimples = (s: string) =>
 export const caixaDoExtrato = (caixas: string[], outros: string[][], tamanho: (caixa: string) => number) =>
   caixas.filter((k) => outros.every((o) => o.includes(k))).sort((a, b) => tamanho(a) - tamanho(b))[0] ?? caixas[0];
 
-const ehPagamentoAdm = (h: string) => /^taxa adm\.?\/aluguel/i.test(h);
+// O NIDO escreve "Taxa ADM./Aluguel - DOC: …" e às vezes só "Taxa Adm" (15210, 27/11/2026: soma no "Total Taxa Adm").
+const ehPagamentoAdm = (h: string) => /^taxa adm\.?(\/aluguel|\s*$)/i.test(h);
 const ehIntermediacao = (h: string) => /^taxa (de )?intermedia/i.test(h);
 const ehAluguel = (h: string) => /^aluguel/i.test(h);
 const ehAbono = (h: string) => /^abono/i.test(h);

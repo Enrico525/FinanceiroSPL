@@ -72,6 +72,8 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
 - Extrato em duas versões (11/2026): mesmo número e proprietário com conteúdo diferente é divergência (antes o
   primeiro ficava em silêncio); cópia idêntica continua contando uma vez.
 - Taxa ADM sem linha "Aluguel" (acordos, 11/2026): conferência manual, sem calcular a base.
+- Linha "Taxa Adm" (27/11/2026): além de "Taxa ADM./Aluguel", o NIDO às vezes escreve só "Taxa Adm" (15210, 13735);
+  é a mesma taxa ADM (o NIDO soma no "Total Taxa Adm"). "Taxa Adm" seguida de outro texto não conta.
 - Troca de conta à mão (11/2026): na tabela de pagamentos, qualquer repasse (mesmo com banco no extrato) pode ser
   mudado de conta ("Pagar pelo Itaú/Bradesco"); usa as mesmas `escolhas` do "sem banco" (`contaDoRepasse`), só em
   memória, e a impressão mostra "Conta trocada à mão". (Criada para o 14481, que no fim estava certo: contrato

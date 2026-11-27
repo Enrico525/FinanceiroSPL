@@ -258,6 +258,14 @@ describe("conferência recibo × repasse", () => {
     expect(textos([RECIBO_NORMAL], [errada])[0]).toMatch(/Taxa ADM de R\$ 120,00; o esperado é R\$ 100,00/);
   });
 
+  it("linha \"Taxa Adm\" (sem /Aluguel) é a taxa ADM (15210)", () => {
+    const ex = repasse(REPASSE_NORMAL.linhas.map((l) => [l.historico === "Taxa ADM./Aluguel" ? "Taxa Adm" : l.historico, l.bruto, l.credito > 0] as [string, number, boolean]));
+    expect(textos([RECIBO_NORMAL], [ex])).toEqual([]);
+    // "Taxa Adm" com outro texto depois não é a linha da taxa ADM.
+    const outra = repasse(REPASSE_NORMAL.linhas.map((l) => [l.historico === "Taxa ADM./Aluguel" ? "Taxa Adm Condomínio" : l.historico, l.bruto, l.credito > 0] as [string, number, boolean]));
+    expect(textos([RECIBO_NORMAL], [outra])).toContain("divergencia: Taxa ADM não descontada.");
+  });
+
   it("taxa ADM sem linha de aluguel (acordo) vai para conferência manual", () => {
     const acordo = repasse([["Acordo ref. aos boletos Alugueis 1/12", 167052, true], ["Taxa ADM./Aluguel - DOC: 1", 8353, false]], {
       situacao: "Aluguel Garantido", // extrato sem recibo é normal: a conferência roda só com o extrato
