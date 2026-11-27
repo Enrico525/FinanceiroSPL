@@ -86,7 +86,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   Expediente" sem "de" também fica retida (8867).
 - Honorário judicial (11/2026): fica sempre com a Special (retido, como a taxa de expediente).
 - Vários repasses na mesma competência (11/2026): só é duplicidade com o mesmo vencimento; vencimentos diferentes são
-  boletos diferentes (inquilino que estava devendo, acordo: 14990).
+  boletos diferentes (inquilino que estava devendo, acordo: 14990). No mesmo vencimento, dois recibos diferentes,
+  cada um com o extrato que credita só lançamentos dele, também são boletos diferentes (`separarBoletos`, 14682,
+  27/11/2026: multa rescisória + dif. de aluguel; antes o 2º extrato saía da soma).
 - Aviso de versão nova (11/2026): a cada 30 s e ao voltar para a aba, o app compara o `/assets/index-*.js` do
   index.html do servidor com o carregado (`AvisoAtualizacao.tsx`) e mostra "Atualizar agora". Atualizar limpa a tela.
 - Represados (11/2026): ~11 proprietários pedem para segurar os repasses. A lista de nomes fica no Supabase (tabela

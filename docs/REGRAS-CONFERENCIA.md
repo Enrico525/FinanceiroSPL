@@ -75,7 +75,9 @@ Cada regra tem teste em `src/nido/conferir.test.ts`. Qualquer mudança aqui prec
   divergência, o extrato aparece em vermelho no topo do resultado e do relatório (entra na soma com o valor do NIDO).
 - **Grave:** mais de um repasse na mesma competência e no mesmo vencimento para o mesmo contrato e proprietário.
   Vencimentos diferentes na mesma competência são boletos diferentes (ex.: inquilino que estava devendo, acordo) e não
-  são divergência.
+  são divergência. No mesmo vencimento, dois recibos diferentes, cada um com o extrato que credita os lançamentos
+  dele (ex.: multa rescisória + diferença de aluguel, 14682), também são boletos diferentes: cada par é conferido
+  separado e os dois entram na soma. Sem par certo para cada extrato, continua sendo duplicidade.
 - Recibo sem extrato, ou extrato sem recibo (fora Aluguel Garantido e Pré-cadastro), aparece em seção própria
   ("Recibo sem extrato" / "Extrato sem recibo"), separada das divergências: pode ser só arquivo faltando.
   Mesmo contrato com vencimento diferente continua sendo divergência.

@@ -354,16 +354,8 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
   for (const r of recibos) grupo(chave(r.contrato, r.vencimento)).recibos.push(r);
   for (const r of repasses) grupo(chave(r.contrato, r.vencimento)).repasses.push(r);
 
-  // Mais de um repasse para o mesmo contrato, competência, proprietário e vencimento: grave. Vencimentos diferentes
-  // na mesma competência são boletos diferentes (inquilino que estava devendo, acordo: 14990, 18/11/2026).
-  const porCompetencia = new Map<string, number>();
-  for (const r of unicosPor(repasses, idRepasse)) {
-    const k = `${r.contrato}|${r.competencia}|${nomeSimples(r.proprietario)}|${r.vencimento}`;
-    porCompetencia.set(k, (porCompetencia.get(k) ?? 0) + 1);
-  }
-
   const casos: Caso[] = [];
-  for (const [k, g] of grupos) {
+  for (const [k, g0] of grupos) for (const g of separarBoletos(g0)) {
     const [contrato, vencimento] = k.split("|");
     const ap: Apontamento[] = [];
     const ok: string[] = [];
@@ -377,9 +369,11 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
         tipo: "divergencia",
         texto: `Extrato de repasse nº ${r.numero} (${r.proprietario}) veio em duas versões diferentes. Use “Adicionar ou trocar extratos” com a versão certa.`,
       });
-    // Um extrato por proprietário; o mesmo proprietário duas vezes é repasse em duplicidade.
+    // Um extrato por proprietário; o mesmo proprietário duas vezes na mesma competência e vencimento é repasse em
+    // duplicidade. Vencimentos diferentes são boletos diferentes (inquilino que estava devendo, acordo: 14990).
+    const semCopia = unicosPor(g.repasses, idRepasse);
     const duplicados = g.repasses.filter(
-      (r) => (porCompetencia.get(`${r.contrato}|${r.competencia}|${nomeSimples(r.proprietario)}|${r.vencimento}`) ?? 0) > 1,
+      (r) => semCopia.filter((x) => x.competencia === r.competencia && nomeSimples(x.proprietario) === nomeSimples(r.proprietario)).length > 1,
     );
     if (duplicados.length)
       ap.push({
@@ -428,6 +422,24 @@ export function conferir(todosRecibos: Recibo[], todosRepasses: Repasse[]): Caso
   }
   const ordem = { divergencia: 0, manual: 1, sem_extrato: 2, sem_recibo: 3, ok: 4 };
   return casos.sort((a, b) => ordem[a.status] - ordem[b.status] || Number(a.contrato) - Number(b.contrato));
+}
+
+/**
+ * Dois boletos do mesmo contrato no mesmo vencimento (multa rescisória + diferença de aluguel: 14682, 27/11/2026):
+ * cada recibo vira um caso com os extratos que creditam só lançamentos dele. Se algum extrato não tiver um recibo só,
+ * ou algum recibo ficar sem extrato, tudo fica junto como antes (e a duplicidade é apontada).
+ */
+function separarBoletos(g: { recibos: Recibo[]; repasses: Repasse[] }) {
+  if (g.recibos.length < 2) return [g];
+  const doRecibo = g.repasses.map((r) => {
+    const creditos = r.linhas.filter((l) => l.credito > l.debito).map((l) => nomeSimples(l.historico));
+    const achados = g.recibos.flatMap((rc, i) =>
+      creditos.length && creditos.every((h) => rc.linhas.some((l) => nomeSimples(l.historico) === h)) ? [i] : [],
+    );
+    return achados.length === 1 ? achados[0] : -1;
+  });
+  if (doRecibo.includes(-1) || g.recibos.some((_, i) => !doRecibo.includes(i))) return [g];
+  return g.recibos.map((rc, i) => ({ recibos: [rc], repasses: g.repasses.filter((_, j) => doRecibo[j] === i) }));
 }
 
 /** Mesmo conteúdo (sem arquivo/página) dá a mesma chave, em qualquer ordem de campos (o jsonb do banco reordena). */

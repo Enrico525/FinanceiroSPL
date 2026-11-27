@@ -379,6 +379,19 @@ describe("conferência recibo × repasse", () => {
     expect(textos([RECIBO_NORMAL], [REPASSE_NORMAL, outro])[0]).toMatch(/^divergencia: Mais de um repasse na competência 10\/2026/);
   });
 
+  it("dois boletos no mesmo vencimento, cada um com seu recibo e extrato, são conferidos separados (14682)", () => {
+    const multa = recibo([["Multa Rescisória 50%", 100000, 0], ["Taxa de Expediente", 750, 0]], { pagina: 1 });
+    const dif = recibo([["Dif. 8 dias aluguel", 30000, 0], ["Taxa de Expediente", 750, 0]], { pagina: 2 });
+    const exMulta = repasse([["Multa Rescisória 50%", 100000, true], ["Taxa ADM./Aluguel", 5000, false]], { numero: "1", pagina: 1 });
+    const exDif = repasse([["Dif. 8 dias aluguel", 30000, true], ["Taxa ADM./Aluguel", 1500, false]], { numero: "2", pagina: 2 });
+    const casos = conferir([dif, multa], [exMulta, exDif]);
+    expect(casos.map((c) => c.repasses.map((r) => r.valor))).toEqual([[28500], [95000]]);
+    expect(casos.flatMap((c) => c.apontamentos).filter((a) => a.tipo === "divergencia")).toEqual([]);
+    expect(totais(casos).geral).toBe(123500);
+    // Recibos iguais: não dá para saber de qual é cada extrato, a duplicidade continua apontada.
+    expect(status([multa, { ...multa, pagina: 2, pago: 1 }], [exMulta, { ...exMulta, numero: "2" }])).toEqual(["divergencia"]);
+  });
+
   it("o mesmo recibo/extrato em dois arquivos não é duplicidade", () => {
     const copiaRecibo = { ...RECIBO_NORMAL, arquivo: "outro.pdf", pagina: 9 };
     const copiaRepasse = { ...REPASSE_NORMAL, arquivo: "outro.pdf", pagina: 9 };
