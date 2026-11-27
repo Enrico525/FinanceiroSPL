@@ -52,6 +52,9 @@ sistema NIDO. A conferência roda **no navegador, com regras fixas e sem IA** (`
   apontamentos e conferidos (ficam na tela de resultado). Recibo sem extrato e extrato só de caução ficam fora.
 - Extrato excluído pela pessoa (11/2026): o contrato sai do resultado e do relatório, em vez de virar "recibo sem
   extrato" (`conferirSem`).
+- Mesmo contrato e mesma conta de destino (banco + agência + conta) na tabela de pagamentos (27/11/2026): as linhas
+  ficam juntas, cada uma com "Repasse i de n · extrato nº", e uma linha de soma em destaque (tela e impressão). Os
+  totais não mudam; cada repasse continua com Excluir e troca de conta próprios.
 - Taxa de intermediação (11/2026): o normal é 100% do aluguel, mas varia conforme o acordo (fora do PDF); diferente
   de 100% continua indo para conferência manual.
 - Taxa Adm no recibo (11/2026): só é certa por acordo do contrato (ex.: 7840), então vira conferência manual.

@@ -410,6 +410,12 @@ function Relatorio({ casos, represados, donos, secoes, escolhas, aoEscolher, aoF
       {([CONTA_ITAU, CONTA_BRADESCO, ""] as const).map((conta) => {
         const linhas = pagamentos.filter((p) => p.conta === conta);
         if (!linhas.length) return null;
+        // Mesmo contrato e mesma conta de destino (ex.: dois boletos do 14682): linhas juntas e uma soma em destaque.
+        const mesmaConta = new Map<string, typeof linhas>();
+        for (const p of linhas) {
+          const k = p.r.banco && p.r.pagamento.conta ? `${p.c.contrato}|${nomeSimples(p.r.banco)}|${p.r.pagamento.agencia}|${p.r.pagamento.conta}` : p.r.id;
+          mesmaConta.set(k, [...(mesmaConta.get(k) ?? []), p]);
+        }
         return (
           <section key={conta || "sem"} className="pagamentos">
             <h3>
@@ -426,13 +432,16 @@ function Relatorio({ casos, represados, donos, secoes, escolhas, aoEscolher, aoF
                 </tr>
               </thead>
               <tbody>
-                {linhas.map(({ c, r, conta: atual }) => {
+                {[...mesmaConta.values()].flatMap((grupo) => [
+                  ...grupo.map(({ c, r, conta: atual }, i) => {
                   const titular = descricaoUtil(r.pagamento.descricao);
+                  const junto = grupo.length > 1;
                   return (
-                    <tr key={r.id} className={pagamentoAchado(c.contrato, r.proprietario, r.valor - r.caucao) ?undefined : "oculto-na-tela"}>
+                    <tr key={r.id} className={[pagamentoAchado(c.contrato, r.proprietario, r.valor - r.caucao) ? "" : "oculto-na-tela", junto ? "pagamentos__parte" : ""].join(" ").trim() || undefined}>
                       <td>
                         <strong className="pagamentos__destaque">{c.contrato}</strong>
                         <span className="caso__meta">{c.competencia && `comp. ${c.competencia}`}</span>
+                        {junto && <span className="caso__meta">Repasse {i + 1} de {grupo.length} · extrato nº {r.id.split("|")[0]}</span>}
                         {c.status !== "ok" && !c.aceito && <span className={`selo selo--${c.status === "divergencia" ? "divergencia" : "manual"}`}>{titulo[c.status]}</span>}
                       </td>
                       <td>
@@ -477,7 +486,21 @@ function Relatorio({ casos, represados, donos, secoes, escolhas, aoEscolher, aoF
                       </td>
                     </tr>
                   );
-                })}
+                  }),
+                  grupo.length > 1 && (
+                    <tr
+                      key={`soma-${grupo[0].r.id}`}
+                      className={`pagamentos__soma${grupo.some(({ c, r }) => pagamentoAchado(c.contrato, r.proprietario, r.valor - r.caucao)) ? "" : " oculto-na-tela"}`}
+                    >
+                      <td colSpan={3}>
+                        <strong>Contrato {grupo[0].c.contrato}: {grupo.length} repasses diferentes para a mesma conta</strong>
+                      </td>
+                      <td className="pagamentos__valor">
+                        <strong>{reais(grupo.reduce((n, { r }) => n + r.valor - r.caucao, 0))}</strong>
+                      </td>
+                    </tr>
+                  ),
+                ])}
               </tbody>
             </table>
           </section>

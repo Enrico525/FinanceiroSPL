@@ -180,6 +180,11 @@ input:focus-visible + .botao, label.botao:focus-within { outline: 3px solid var(
 .pagamentos__tabela .selo { display: inline-block; margin-top: 0.15rem; }
 .pagamentos__valor { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pagamentos__valor .botao { display: inline; margin-top: 0.15rem; }
+.pagamentos__parte td:first-child { border-left: 4px solid var(--vinho); }
+.pagamentos__soma td { background: var(--bege); color: var(--vinho); border-bottom: 2px solid var(--vinho); }
+.pagamentos__soma td:first-child { border-left: 4px solid var(--vinho); }
+.pagamentos__soma .pagamentos__valor strong { font-size: 1.3rem; }
+@media print { .pagamentos__soma td { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 @media (max-width: 640px) {
   .pagamentos__tabela thead { display: none; }
   .pagamentos__tabela tr { display: block; border-bottom: 1px solid var(--linha); padding: 0.3rem 0; }
