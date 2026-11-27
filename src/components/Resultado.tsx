@@ -571,7 +571,8 @@ export function Resultado({ casos: originais, modo, represados, donos, jaPagos, 
   const [aceitos, setAceitos] = useState<Set<string>>(new Set());
   const [escolhas, setEscolhas] = useState<Record<string, Conta>>({});
   const [manuais, setManuais] = useState<Manual[]>([]);
-  const id = (c: Caso) => `${c.contrato}|${c.vencimento}`;
+  // Dois boletos no mesmo vencimento viram dois casos (separarBoletos): o arquivo/página diferencia.
+  const id = (c: Caso) => `${c.contrato}|${c.vencimento}|${c.onde[0] ?? ""}`;
   const casos: Visto[] = originais.map((c) => (aceitos.has(id(c)) ? { ...c, status: "ok", aceito: true } : c));
   const aceitar = (c: Caso, sim: boolean) =>
     setAceitos((atual) => {
